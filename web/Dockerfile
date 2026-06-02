@@ -4,7 +4,7 @@
 FROM node:22-alpine AS dev
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 COPY . .
 ENV HOST=0.0.0.0
 ENV PORT=3000
@@ -15,7 +15,7 @@ CMD ["npm", "run", "dev"]
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # ---------- build ----------
 FROM node:22-alpine AS build

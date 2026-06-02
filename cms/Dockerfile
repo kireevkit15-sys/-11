@@ -5,7 +5,7 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev vips-dev git python3
 WORKDIR /opt/app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # ---------- build ----------
 FROM node:22-alpine AS build
