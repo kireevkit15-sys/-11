@@ -1,5 +1,16 @@
 # syntax=docker/dockerfile:1.7
 
+# ---------- dev (hot reload, used by docker-compose.dev.yml) ----------
+FROM node:22-alpine AS dev
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
+COPY . .
+ENV HOST=0.0.0.0
+ENV PORT=3000
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
 # ---------- deps ----------
 FROM node:22-alpine AS deps
 WORKDIR /app
