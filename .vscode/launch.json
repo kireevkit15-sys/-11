@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: web (Next.js)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cd web && npm run dev",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Debug: bot",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "watch", "src/index.ts"],
+      "cwd": "${workspaceFolder}/bot",
+      "envFile": "${workspaceFolder}/bot/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug: cms (Strapi)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cd cms && npm run develop",
+      "cwd": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug: All (web + cms + bot)",
+      "configurations": [
+        "Debug: web (Next.js)",
+        "Debug: cms (Strapi)",
+        "Debug: bot"
+      ],
+      "stopAll": true
+    }
+  ]
+}

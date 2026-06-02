@@ -1,0 +1,751 @@
+/* TODO: replace tokens once brand book arrives — see docs/06-client-checklist.md */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — Pilot-like / Premium Minimalism / Violet
+ *
+ * Палитра построена на #7C3AED (богатый фиолетовый) — данные из
+ * ui-ux-pro-max skill (P2P Marketplace, AI/Chatbot, Membership categories).
+ * Тёплый коралл #FB923C сохраняем как акцент-CTA.
+ *
+ * Layering convention:
+ *   --brand-*        : raw brand colours (заменит дизайнер)
+ *   shadcn semantic  : --background, --primary, --accent, etc.
+ *   --radius-* / fonts : sizing + typography primitives
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* ---------- Brand: Premium Violet ---------- */
+  --brand-primary: #7C3AED;             /* deep violet — главный фокусный */
+  --brand-primary-foreground: #FFFFFF;
+  --brand-deep: #4C1D95;                /* deep violet для тёмных секций */
+  --brand-soft: #A78BFA;                /* мягкий violet, hover/secondary */
+  --brand-tint: #FAF5FF;                /* warm lavender фон тёплых секций */
+  --brand-accent: #FB923C;              /* warm coral для CTA-контраста */
+  --brand-accent-foreground: #1A0F00;
+  --brand-cream: #FAF7F2;               /* off-white между секциями */
+  --brand-ink: #0F0B1E;                 /* near-black с фиолетовым подтоном для dark секций */
+
+  /* ---------- shadcn semantic tokens (light theme) ---------- */
+  --background: #FFFFFF;
+  --foreground: #0F0F1A;
+
+  --card: #FFFFFF;
+  --card-foreground: #0F0F1A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0F0F1A;
+
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+
+  --secondary: var(--brand-tint);
+  --secondary-foreground: var(--brand-deep);
+
+  --muted: var(--brand-cream);
+  --muted-foreground: #6B6B7A;
+
+  --accent: var(--brand-accent);
+  --accent-foreground: var(--brand-accent-foreground);
+
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #ECE4FA;                    /* soft violet border */
+  --input: #ECE4FA;
+  --ring: var(--brand-primary);
+
+  /* ---------- Radii ---------- */
+  --radius-sm: 0.375rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* ---------- Typography (резолвятся через next/font в layout.tsx) ---------- */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-sans);
+  --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ---------- shadcn extras kept for component compatibility ---------- */
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-soft);
+  --chart-3: var(--brand-accent);
+  --chart-4: #A8A29E;
+  --chart-5: #DC2626;
+  --sidebar: var(--brand-cream);
+  --sidebar-foreground: #0F0F1A;
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-primary-foreground);
+  --sidebar-accent: var(--brand-tint);
+  --sidebar-accent-foreground: var(--brand-primary);
+  --sidebar-border: #ECE4FA;
+  --sidebar-ring: var(--brand-primary);
+}
+
+.dark {
+  --background: var(--brand-ink);
+  --foreground: #F5F0FF;
+
+  --card: #1A1330;
+  --card-foreground: #F5F0FF;
+
+  --popover: #1A1330;
+  --popover-foreground: #F5F0FF;
+
+  --primary: var(--brand-soft);
+  --primary-foreground: var(--brand-ink);
+
+  --secondary: #251B45;
+  --secondary-foreground: #F5F0FF;
+
+  --muted: #1A1330;
+  --muted-foreground: #A89BC5;
+
+  --accent: var(--brand-accent);
+  --accent-foreground: var(--brand-accent-foreground);
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: rgba(167, 139, 250, 0.18);
+  --input: rgba(167, 139, 250, 0.18);
+  --ring: var(--brand-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tailwind v4 theme bridge
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-foreground: var(--brand-primary-foreground);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --color-brand-cream: var(--brand-cream);
+  --color-brand-ink: var(--brand-ink);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    /* OpenType: cv02-04 — humanist '1', cv11 — straight 'l'. Tabular-nums локально. */
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+  }
+  /* Editorial-серif для одного-двух акцентных слов в заголовках */
+  .font-serif-accent {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.02em;
+  }
+  .tabular-nums-display {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ===========================================================================
+ * УТИЛИТЫ ФОНОВ — переработаны под violet-палитру
+ * ========================================================================= */
+@layer utilities {
+
+  /* ---------- Aurora-фоны — статичные (без анимации: performance + нет тумана) ---------- */
+
+  /* Светлый violet-aurora для hero — мягкие пятна, белый базис */
+  .bg-aurora-hero {
+    background-color: #FFFFFF;
+    background-image:
+      radial-gradient(ellipse 700px 500px at 12% 18%, rgba(124, 58, 237, 0.12), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 88% 32%, rgba(167, 139, 250, 0.16), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 50% 95%, rgba(251, 146, 60, 0.08), transparent 65%);
+  }
+
+  /* Тёмный violet-aurora для trust-strip — глубокий ink-фиолет */
+  .bg-aurora-dark {
+    background-color: var(--brand-ink);
+    background-image:
+      radial-gradient(ellipse 800px 600px at 18% 22%, rgba(124, 58, 237, 0.55), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 82% 38%, rgba(167, 139, 250, 0.40), transparent 55%),
+      radial-gradient(ellipse 600px 500px at 50% 95%, rgba(251, 146, 60, 0.20), transparent 60%),
+      radial-gradient(ellipse 900px 350px at 30% 100%, rgba(76, 29, 149, 0.65), transparent 65%);
+  }
+
+  /* Кремовая секция с лёгким переливом */
+  .bg-aurora-cream {
+    background-color: var(--brand-cream);
+    background-image:
+      radial-gradient(circle 600px at 80% 0%, rgba(124, 58, 237, 0.08), transparent 60%),
+      radial-gradient(circle 500px at 15% 100%, rgba(251, 146, 60, 0.07), transparent 60%);
+  }
+
+  /* Едва видимая лавандовая секция */
+  .bg-aurora-tint {
+    background-color: var(--brand-tint);
+    background-image:
+      radial-gradient(ellipse 800px 400px at 50% 0%, rgba(124, 58, 237, 0.10), transparent 65%);
+  }
+
+  /* Тёмный «звёздный» фон — точечная сетка для глубоких секций */
+  .pattern-dot-grid-dark {
+    background-image: radial-gradient(circle, rgba(167, 139, 250, 0.10) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .pattern-dot-grid-light {
+    background-image: radial-gradient(circle, rgba(124, 58, 237, 0.10) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* ---------- Текстовые эффекты ---------- */
+
+  /* Текст-градиент: violet → soft → coral */
+  .text-gradient-brand {
+    background-image: linear-gradient(110deg, #7C3AED 0%, #A78BFA 50%, #FB923C 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Светящийся текст для тёмных секций */
+  .glow-text-violet {
+    text-shadow:
+      0 0 30px rgba(167, 139, 250, 0.35),
+      0 0 60px rgba(124, 58, 237, 0.20);
+  }
+
+  /* ---------- Glass / Surface ---------- */
+
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .glass-card-dark {
+    background-color: rgba(167, 139, 250, 0.07);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(167, 139, 250, 0.15);
+  }
+
+  /* ---------- Тонкий scrollbar для detail-панели команды ---------- */
+  .diva-detail-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--brand-soft) 35%, transparent) transparent;
+  }
+  .diva-detail-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .diva-detail-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--brand-soft) 50%, transparent);
+    border-radius: 4px;
+  }
+  .diva-detail-scroll::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--brand-soft) 75%, transparent);
+  }
+
+  /* ---------- Bleed: тёмная секция «стекает» в соседние ---------- */
+
+  .bleed-dark-up::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 160px;
+    transform: translateY(-100%);
+    background: radial-gradient(ellipse 120% 100% at 50% 100%, rgba(15, 11, 30, 0.65), transparent 75%);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .bleed-dark-down::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 160px;
+    transform: translateY(100%);
+    background: radial-gradient(ellipse 120% 100% at 50% 0%, rgba(15, 11, 30, 0.65), transparent 75%);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ---------- Noise overlay против бандинга в градиентах ---------- */
+  .noise-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Скрытый scrollbar — для горизонтальных карусели */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ───────── НЕОН: пульсирующая аура для активной карточки экспертизы ───────── */
+  .neon-active {
+    animation: neon-breath 3.2s ease-in-out infinite;
+  }
+  .neon-digit {
+    animation: neon-digit-glow 3.2s ease-in-out infinite;
+  }
+
+  /* Сканлайны — субтильная киберпанк-фактура поверх карточки */
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.022) 0,
+      rgba(255, 255, 255, 0.022) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+
+  /* ---------------------------------------------------------------------------
+   * Service-card hover-scroll: на десктопе высота фиксирована, контент скроллится
+   * при ховере. На мобильных карточка сама растягивается, скролл не нужен.
+   * ------------------------------------------------------------------------- */
+  .service-card-scroll {
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(167, 139, 250, 0.30) transparent;
+    /* Маска снизу для красивого fade — намёк, что есть ещё контент */
+    -webkit-mask-image: linear-gradient(to bottom, black 0, black calc(100% - 36px), transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0, black calc(100% - 36px), transparent 100%);
+    transition: -webkit-mask-image 0.3s ease, mask-image 0.3s ease;
+  }
+  .service-card-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .service-card-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .service-card-scroll::-webkit-scrollbar-thumb {
+    background: rgba(167, 139, 250, 0.28);
+    border-radius: 999px;
+  }
+  .service-card-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(167, 139, 250, 0.50);
+  }
+  /* Активируем скролл только на >= lg при ховере родительского .group/card */
+  @media (min-width: 1024px) {
+    .group\/card:hover .service-card-scroll,
+    .group\/card:focus-within .service-card-scroll {
+      overflow-y: auto;
+      /* Fade-маска полностью раскрывается при ховере */
+      -webkit-mask-image: linear-gradient(to bottom, black 0, black 100%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 0, black 100%, transparent 100%);
+    }
+  }
+
+  /* ---------- Дрейфующий violet-блоб для hero-уровня декора ---------- */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.55;
+    will-change: transform;
+    pointer-events: none;
+  }
+  .blob-violet {
+    background: radial-gradient(circle, #7C3AED 0%, transparent 70%);
+    animation: drift-slow 24s ease-in-out infinite alternate;
+  }
+  .blob-soft {
+    background: radial-gradient(circle, #A78BFA 0%, transparent 70%);
+    animation: drift-slow-2 28s ease-in-out infinite alternate;
+  }
+  .blob-coral {
+    background: radial-gradient(circle, #FB923C 0%, transparent 70%);
+    animation: drift-slow-3 30s ease-in-out infinite alternate;
+  }
+}
+
+/* ===========================================================================
+ * KEYFRAMES — медленные органические движения, GPU-friendly
+ * ========================================================================= */
+
+/* Aurora-меш «дышит»: opacity пульсация на overlay-элементах вместо background-position (paint-heavy) */
+/* ── Hero figure idle float — single CSS animation, replaces 3 nested motion.div ── */
+.hero-figure-idle {
+  animation: hero-float 9s ease-in-out infinite;
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25%       { transform: translateY(-22px) rotate(-2deg) scale(1.025); }
+  50%       { transform: translateY(0) rotate(0deg) scale(1); }
+  75%       { transform: translateY(18px) rotate(2deg) scale(1.015); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-figure-idle {
+    animation-duration: 0.01ms;
+  }
+}
+
+@keyframes aurora-drift {
+  0%   { opacity: 0.85; }
+  25%  { opacity: 1;    }
+  50%  { opacity: 0.9;  }
+  75%  { opacity: 0.95; }
+  100% { opacity: 0.85; }
+}
+
+@keyframes drift-slow {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(60px, -40px) scale(1.12); }
+}
+@keyframes drift-slow-2 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-50px, 50px) scale(1.18); }
+}
+@keyframes drift-slow-3 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(40px, 60px) scale(0.92); }
+}
+
+/* ── Анимации 3D-карточек кейсов ── */
+
+/* 1. Float bob */
+@keyframes cases-float {
+  0%, 100% { transform: translateY(0px);   }
+  50%       { transform: translateY(-14px); }
+}
+
+/* 2. Neon glow pulse — opacity on pseudo-element instead of box-shadow (paint-heavy) */
+/* Actual box-shadow stays static, only opacity breathes — GPU-composited */
+@keyframes cases-glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
+}
+
+/* 3. Dot heartbeat */
+@keyframes cases-dot {
+  0%, 100% { box-shadow: 0 0 6px rgba(167,139,250,0.65); transform: scale(1);   }
+  50%       { box-shadow: 0 0 18px rgba(167,139,250,1.00); transform: scale(1.5); }
+}
+
+/* 4. Glass glint — simplified: no skewX (GPU-friendly) */
+@keyframes cases-glint {
+  0%, 18%  { transform: translateX(-130%); opacity: 0;   }
+  21%      {                                             opacity: 0.7; }
+  38%, 100%{ transform: translateX(460%); opacity: 0;   }
+}
+
+
+
+/* ───────── HOLO-RIBBON для FAQ — пульс 2 секунды ───────── */
+
+/* Glow-ореол вокруг 3D-ленты: дышит scale + opacity */
+@keyframes holo-glow-2s {
+  0%, 100% {
+    opacity: 0.50;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+.holo-glow-2s {
+  animation: holo-glow-2s 2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* Сама лента — едва заметная синхронная пульсация */
+@keyframes holo-pulse-2s {
+  0%, 100% {
+    opacity: 0.88;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.025);
+  }
+}
+.holo-pulse-2s {
+  animation: holo-pulse-2s 2s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* ───────── НЕОН keyframes для секции «Шесть принципов» ───────── */
+
+/* Пульсирующая аура карточки: glow дышит */
+@keyframes neon-breath {
+  0%, 100% {
+    box-shadow:
+      0 0 18px rgba(167, 139, 250, 0.32),
+      0 0 38px rgba(124, 58, 237, 0.18),
+      inset 0 0 22px rgba(167, 139, 250, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 32px rgba(167, 139, 250, 0.55),
+      0 0 70px rgba(124, 58, 237, 0.32),
+      inset 0 0 28px rgba(167, 139, 250, 0.16);
+  }
+}
+
+/* Цифра 01–06: контурный stroke пульсирует */
+@keyframes neon-digit-glow {
+  0%, 100% {
+    -webkit-text-stroke-color: rgba(167, 139, 250, 0.25);
+    filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.10));
+  }
+  50% {
+    -webkit-text-stroke-color: rgba(167, 139, 250, 0.60);
+    filter: drop-shadow(0 0 18px rgba(167, 139, 250, 0.40));
+  }
+}
+
+/* Бесконечная лента кейсов: трек продублирован 2× в JSX, поэтому -50% даёт seamless loop */
+@keyframes marquee-left {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes marquee-right {
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+/* ── Star particles (8, was 20) + Floating particles (6, was 12) + Falling stars ── */
+.star-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: #A78BFA;
+  box-shadow: 0 0 6px rgba(167,139,250,0.8), 0 0 12px rgba(124,58,237,0.4);
+  will-change: opacity, transform;
+  animation: starTwinkle 3s ease-in-out infinite;
+}
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.8); }
+}
+
+.floating-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167,139,250,0.6) 0%, transparent 70%);
+  will-change: transform, opacity;
+  animation: floatAround 20s ease-in-out infinite;
+}
+@keyframes floatAround {
+  0%, 100% { transform: translate(0, 0);         opacity: 0.4; }
+  25%       { transform: translate(30px, -40px); opacity: 0.6; }
+  50%       { transform: translate(-20px, -60px); opacity: 0.3; }
+  75%       { transform: translate(40px, -20px);  opacity: 0.5; }
+}
+
+.falling-star {
+  position: absolute;
+  top: -20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, rgba(167,139,250,0.9) 50%, rgba(124,58,237,0.4) 100%);
+  box-shadow:
+    0 0 4px rgba(255,255,255,0.9),
+    0 0 12px rgba(167,139,250,0.6),
+    0 0 24px rgba(124,58,237,0.3);
+  animation: starFall linear infinite;
+}
+@keyframes starFall {
+  0%   { transform: translateY(-20px) translateX(0) rotate(60deg); opacity: 0; }
+  5%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(105vh) translateX(calc(var(--drift, 0px) * 40px)) rotate(60deg); opacity: 0; }
+}
+
+@keyframes neonPulse {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(2.5);  opacity: 0; }
+}
+
+/* Animated gradient border for video cards */
+@keyframes animate-gradient-rotate {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-rotate {
+  animation: animate-gradient-rotate 4s ease infinite;
+  background-size: 300% 300%;
+}
+
+/* Slow pulse for glow rings */
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.5; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Floating ambient orbs */
+@keyframes float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -20px) scale(1.05); }
+  66%       { transform: translate(-20px, 10px) scale(0.95); }
+}
+@keyframes float-medium {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33%       { transform: translate(-40px, 20px) rotate(5deg); }
+  66%       { transform: translate(20px, -30px) rotate(-3deg); }
+}
+@keyframes float-fast {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(15px, -15px); }
+}
+.animate-float-slow   { animation: float-slow 20s ease-in-out infinite; }
+.animate-float-medium { animation: float-medium 15s ease-in-out infinite; }
+
+/* ── Video card: бегущий огонь по рамке ── */
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes border-spin {
+  to { --border-angle: 360deg; }
+}
+.video-card-border {
+  background: conic-gradient(
+    from var(--border-angle),
+    #7C3AED 0%,
+    #A78BFA 15%,
+    #FB923C 30%,
+    #7C3AED 45%,
+    #0F0B1E 50%,
+    #0F0B1E 80%,
+    #7C3AED 100%
+  );
+  animation: border-spin 3s linear infinite;
+}
+.video-card-border-idle {
+  background: conic-gradient(
+    from var(--border-angle),
+    rgba(124,58,237,0.6) 0%,
+    rgba(167,139,250,0.3) 20%,
+    rgba(15,11,30,0.8) 40%,
+    rgba(15,11,30,0.8) 70%,
+    rgba(124,58,237,0.6) 100%
+  );
+  animation: border-spin 6s linear infinite;
+}
+
+/* ── Video card: glow-пульс в покое ── */
+@keyframes video-card-breathe {
+  0%, 100% { box-shadow: 0 0 20px rgba(124,58,237,0.15), 0 0 40px rgba(124,58,237,0.05); }
+  50%       { box-shadow: 0 0 35px rgba(124,58,237,0.35), 0 0 70px rgba(124,58,237,0.12); }
+}
+.video-card-breathe {
+  animation: video-card-breathe 3s ease-in-out infinite;
+}
+
+/* ── Video card: reveal clip-path ── */
+@keyframes video-card-reveal {
+  from { clip-path: inset(100% 0 0 0); opacity: 0; }
+  to   { clip-path: inset(0% 0 0 0);   opacity: 1; }
+}
+.animate-float-fast  { animation: float-fast 10s ease-in-out infinite; }
+
+/* ─── END CONTENT SECTION ─── */
+
+/* Доступность: уважаем prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  /* Только декоративные анимации — не интерактивные элементы */
+  .blob,
+  .animate-gradient-rotate,
+  .animate-pulse-slow,
+  .animate-float-slow,
+  .animate-float-medium,
+  .animate-float-fast,
+  .hero-figure-idle,
+  .star-particle,
+  .floating-particle,
+  .falling-star {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* Transitions отключаем ТОЛЬКО для анимаций, не для hover-эффектов */
+  .aurora-pulse,
+  .glow-pulse {
+    transition-duration: 0.01ms !important;
+  }
+}

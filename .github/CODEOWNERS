@@ -1,0 +1,4 @@
+# CODEOWNERS — auto-requests review from the listed owner on every PR.
+# TODO: replace @placeholder-owner with the project lead's GitHub handle
+# (or a team handle, e.g. @diva-org/maintainers) once the repository is created.
+* @placeholder-owner

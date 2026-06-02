@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+build
+out
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.strapi
+public
+docs/_generate_*.py

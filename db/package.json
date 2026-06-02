@@ -1,0 +1,29 @@
+{
+  "name": "diva-db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared PostgreSQL schema and Drizzle ORM definitions for the Diva accounting website (web/ and bot/).",
+  "main": "schema.ts",
+  "types": "schema.ts",
+  "files": [
+    "schema.ts",
+    "init.sql",
+    "migrations"
+  ],
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "check": "drizzle-kit check"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.6.3"
+  }
+}

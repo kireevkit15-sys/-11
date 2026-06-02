@@ -1,0 +1,60 @@
+name: Deploy to VPS
+
+# TODO: Nothing in this workflow will run end-to-end until the following GitHub
+# repository settings are configured (Settings -> Secrets and variables -> Actions,
+# and Settings -> Environments -> production):
+#   Secrets (environment "production"):
+#     SSH_PRIVATE_KEY  — private SSH key (PEM) authorised on the VPS
+#     VPS_HOST         — VPS hostname or IP
+#     VPS_USER         — SSH username on the VPS
+#   Environment "production" should require a reviewer for manual approval.
+# Once secrets exist and the VPS path/compose layout is finalised, flip the
+# `if: false` guard on the push trigger below to enable auto-deploy on main.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    # TODO: remove `github.event_name != 'push'` once VPS is ready to auto-deploy
+    # on push to main. Until then, only manual workflow_dispatch runs proceed.
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Trust VPS host key
+        # TODO: replace with `ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts`
+        # or pin a known_hosts entry once VPS_HOST is configured.
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "${{ secrets.VPS_HOST }}" ]; then
+            ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+      - name: Run deploy script on VPS
+        # TODO: adjust /opt/diva path and compose file location to match the
+        # actual VPS layout once provisioned.
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'set -euo pipefail
+             cd /opt/diva
+             git pull --ff-only
+             docker compose -f ops/docker-compose.prod.yml pull
+             docker compose -f ops/docker-compose.prod.yml up -d --remove-orphans
+             docker image prune -f'

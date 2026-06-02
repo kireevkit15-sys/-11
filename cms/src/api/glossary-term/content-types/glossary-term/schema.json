@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "glossary_terms",
+  "info": {
+    "singularName": "glossary-term",
+    "pluralName": "glossary-terms",
+    "displayName": "Термин глоссария",
+    "description": ""
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "term": { "type": "string", "required": true },
+    "slug": { "type": "uid", "targetField": "term", "required": true },
+    "definition": { "type": "richtext", "required": true },
+    "category": { "type": "string" }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "diva:up",
+      "type": "shell",
+      "command": "make dev",
+      "options": {
+        "cwd": "${workspaceFolder}/ops"
+      },
+      "presentation": {
+        "panel": "new",
+        "reveal": "always",
+        "echo": true,
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "diva:down",
+      "type": "shell",
+      "command": "make stop",
+      "options": {
+        "cwd": "${workspaceFolder}/ops"
+      },
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "diva:logs",
+      "type": "shell",
+      "command": "make logs",
+      "options": {
+        "cwd": "${workspaceFolder}/ops"
+      },
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "web:install",
+      "type": "shell",
+      "command": "cd web && npm install",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cms:install",
+      "type": "shell",
+      "command": "cd cms && npm install",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "bot:install",
+      "type": "shell",
+      "command": "cd bot && npm install",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "shared",
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "install:all",
+      "dependsOn": ["web:install", "cms:install", "bot:install"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}

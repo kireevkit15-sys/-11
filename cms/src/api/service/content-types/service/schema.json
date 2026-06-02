@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "services",
+  "info": {
+    "singularName": "service",
+    "pluralName": "services",
+    "displayName": "Услуга",
+    "description": ""
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "slug": { "type": "uid", "targetField": "title", "required": true },
+    "tax_system": { "type": "enumeration", "enum": ["УСН-Д", "УСН-ДР", "ОСН", "АУСН", "ПСН", "ФСИ", "Разовое"] },
+    "base_price": { "type": "integer", "description": "цена от, в рублях/мес или за услугу" },
+    "includes": { "type": "json", "default": [] },
+    "target_audience": { "type": "text" },
+    "is_highlighted": { "type": "boolean", "default": false }
+  }
+}

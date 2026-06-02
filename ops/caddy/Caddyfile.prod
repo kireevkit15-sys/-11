@@ -1,0 +1,72 @@
+# =============================================================================
+# Caddyfile.prod — production reverse proxy for ДИВА
+# Used by ops/docker-compose.prod.yml inside the `caddy` container.
+# Env vars are read at startup: DOMAIN, ADMIN_DOMAIN, ACME_EMAIL.
+# =============================================================================
+
+{
+	# Email for Let's Encrypt account / expiry notifications.
+	email {$ACME_EMAIL}
+
+	# Disable Caddy's local admin API (not needed in prod, reduces attack surface).
+	admin off
+
+	# Uncomment while testing certificate issuance to avoid LE rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# -----------------------------------------------------------------------------
+# Public site → Next.js (web container)
+# -----------------------------------------------------------------------------
+{$DOMAIN} {
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Hide upstream server identity
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/web-access.log
+		format json
+	}
+
+	reverse_proxy web:3000
+}
+
+# -----------------------------------------------------------------------------
+# Admin → Strapi (cms container)
+# -----------------------------------------------------------------------------
+{$ADMIN_DOMAIN} {
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/admin-access.log
+		format json
+	}
+
+	# -------------------------------------------------------------------------
+	# Optional IP whitelist for the Strapi admin panel.
+	# Uncomment and list trusted office / VPN / home IPs (CIDR allowed).
+	# Keep `whitelist.example.txt` as a reference for the format.
+	# -------------------------------------------------------------------------
+	# @allowed remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
+	# @denied not remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
+	# respond @denied 403
+
+	reverse_proxy cms:1337
+}

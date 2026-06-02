@@ -1,0 +1,28 @@
+# =============================================================================
+# whitelist.example.txt — example IP/CIDR allow-list for admin.{$DOMAIN}
+#
+# Format: one IP or CIDR per line. Both IPv4 and IPv6 are supported.
+# Lines starting with '#' and blank lines are ignored.
+#
+# This file is NOT read by Caddy directly. Copy the entries you want into
+# the @allowed / @denied matchers in Caddyfile.prod (see README.md), e.g.:
+#
+#     @allowed  remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
+#     @denied   not remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
+#     respond   @denied 403
+#
+# Keep this file in version control as a reference; do NOT put real prod
+# IPs here if the repo is public — store those in a private secrets vault.
+# =============================================================================
+
+# Office network (example)
+203.0.113.0/24
+
+# VPN exit node (example)
+198.51.100.42
+
+# Single admin home IP (example)
+192.0.2.17
+
+# IPv6 example
+2001:db8:abcd::/48

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+
+# Drizzle keeps a /meta directory inside ./migrations for snapshot bookkeeping.
+# We let drizzle-kit regenerate it locally; only the SQL files are committed.
+migrations/meta/
