@@ -53,8 +53,10 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
+      suppressHydrationWarning
       className={cn(
         'h-full',
+        'dark',
         'antialiased',
         inter.variable,
         onest.variable,
