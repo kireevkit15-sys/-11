@@ -38,6 +38,7 @@ services:
   cms:
     build:
       context: ../cms
+      target: dev
     container_name: diva-cms-dev
     depends_on:
       postgres:
