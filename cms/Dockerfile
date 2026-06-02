@@ -12,6 +12,7 @@ FROM node:22-alpine AS build
 RUN apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev vips-dev git python3
 WORKDIR /opt/app
 ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=512
 COPY --from=deps /opt/app/node_modules ./node_modules
 COPY . .
 RUN npm run build
