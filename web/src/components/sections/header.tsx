@@ -104,7 +104,7 @@ export function Header() {
         className="pointer-events-none sticky top-0 z-50 flex justify-center px-3 pt-3 sm:px-4 sm:pt-4"
       >
         <div
-          className="pointer-events-auto relative flex w-full items-center gap-3 rounded-[36px] px-4 py-2.5 sm:gap-4 sm:px-5"
+          className="pointer-events-auto relative mx-auto grid w-[min(calc(100vw-24px),920px)] grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[36px] px-4 py-2.5 sm:gap-4 sm:px-5"
           style={{
             background: 'linear-gradient(165deg, rgba(48,36,86,0.55) 0%, rgba(22,16,42,0.72) 45%, rgba(8,5,18,0.88) 100%)',
             WebkitBackdropFilter: 'blur(32px) saturate(180%)',
@@ -137,11 +137,12 @@ export function Header() {
           </Link>
 
           {/* Nav */}
-          <nav className="hidden items-center gap-0.5 lg:flex">
+          <nav className="hidden items-center justify-self-center gap-1.5 lg:flex">
             {navLinks.map(link => {
-              const isActive = link.href.startsWith('/')
-                ? pathname === link.href
-                : activeSection === link.sectionId
+              const isAnchor = link.href.startsWith('/#')
+              const isActive = isAnchor
+                ? activeSection === link.sectionId
+                : pathname === link.href
               const mega = 'hasMega' in link ? link.hasMega : undefined
 
               if (mega) {

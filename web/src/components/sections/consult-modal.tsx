@@ -16,6 +16,7 @@ export function ConsultModal({ onClose }: { onClose: () => void }) {
   const reduced = useReducedMotion()
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [time, setTime] = useState<TimeId | null>(null)
@@ -208,23 +209,43 @@ export function ConsultModal({ onClose }: { onClose: () => void }) {
                   type="button"
                   onClick={async (e) => {
                     e.preventDefault()
-                    if (!name || !phone || loading) return
+                    const trimmedName = name.trim()
+                    const trimmedPhone = phone.trim()
+                    if (loading) return
+                    if (!trimmedName || !trimmedPhone) {
+                      setError('Заполните имя и контакт для связи.')
+                      return
+                    }
+
                     setLoading(true)
-                    await fetch('/api/leads', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        name,
-                        contact: phone,
-                        source: 'site',
-                        page: window.location.pathname,
-                        utm: { preferred_time: time ?? '' },
-                      }),
-                    }).catch(() => null)
-                    setLoading(false)
-                    setSent(true)
+                    setError('')
+                    try {
+                      const res = await fetch('/api/leads', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          name: trimmedName,
+                          contact: trimmedPhone,
+                          source: 'site',
+                          page: window.location.pathname,
+                          utm: { preferred_time: time ?? '' },
+                        }),
+                      })
+
+                      if (!res.ok) throw new Error('lead-submit-failed')
+                      setSent(true)
+                    } catch {
+                      setError('Не удалось отправить заявку. Попробуйте ещё раз или напишите нам в Telegram.')
+                    } finally {
+                      setLoading(false)
+                    }
                   }}
-                  className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl font-display text-[14px] font-semibold text-white transition-all"
+                  disabled={loading}
+                  aria-busy={loading}
+                  className={cn(
+                    'group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl font-display text-[14px] font-semibold text-white transition-all',
+                    loading && 'cursor-wait opacity-70',
+                  )}
                   style={{
                     background: 'linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%)',
                     boxShadow: '0 8px 32px rgba(124,58,237,0.45)',
@@ -236,6 +257,12 @@ export function ConsultModal({ onClose }: { onClose: () => void }) {
                   <ArrowRight weight="bold" className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
                 </button>
+
+                {error && (
+                  <p className="-mt-2 rounded-2xl border border-brand-accent/25 bg-brand-accent/10 px-4 py-3 text-[12px] leading-relaxed text-brand-accent">
+                    {error}
+                  </p>
+                )}
 
                 {/* Contacts */}
                 <div className="flex items-center gap-4 border-t pt-4" style={{ borderColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.28)' }}>

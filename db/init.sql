@@ -16,15 +16,43 @@ CREATE TABLE IF NOT EXISTS leads (
     contact     text        NOT NULL,
     source      text,
     page        text,
-    utm         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    utm         jsonb       DEFAULT '{}'::jsonb,
     status      text        NOT NULL DEFAULT 'new'
                 CHECK (status IN ('new', 'in_progress', 'spam', 'converted', 'lost')),
     notes       text,
+    interaction_at timestamptz,
+    notified    boolean     NOT NULL DEFAULT false,
     created_at  timestamptz NOT NULL DEFAULT now(),
     updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE leads IS 'Заявки с форм сайта: контактные формы, обратный звонок, лид-магниты.';
+
+CREATE TABLE IF NOT EXISTS lead_notes (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id     uuid        NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    text        text        NOT NULL,
+    author      text        NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id     uuid        NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    chat_id     text        NOT NULL,
+    message_id  integer     NOT NULL,
+    fire_at     timestamptz NOT NULL,
+    sent        boolean     NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS clients (
+    id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id          uuid        NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    tags             jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    notes            text        NOT NULL DEFAULT '',
+    next_contact_at  timestamptz,
+    created_at       timestamptz NOT NULL DEFAULT now()
+);
 
 -- =====================================================================
 -- subscribers — подписчики рассылки (email и/или Telegram)
@@ -74,6 +102,15 @@ CREATE INDEX IF NOT EXISTS idx_leads_created_at
     ON leads (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_leads_status
     ON leads (status);
+CREATE INDEX IF NOT EXISTS idx_leads_notified
+    ON leads (notified);
+CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id
+    ON lead_notes (lead_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_fire_at
+    ON reminders (fire_at)
+    WHERE sent = false;
+CREATE INDEX IF NOT EXISTS idx_clients_lead_id
+    ON clients (lead_id);
 CREATE INDEX IF NOT EXISTS idx_subscribers_email
     ON subscribers (email);
 CREATE INDEX IF NOT EXISTS idx_calculator_logs_created_at

@@ -1,0 +1,4 @@
+diva-start-up.ru, www.diva-start-up.ru {
+  encode gzip zstd
+  reverse_proxy web:3000
+}
