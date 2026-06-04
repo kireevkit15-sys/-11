@@ -466,12 +466,35 @@ function AnimatedCounter({ value, duration = 2000 }: { value: string; duration?:
   return <span ref={ref}>{initial}</span>
 }
 
+function VideoThumbnailFallback({ video }: { video: VideoItem }) {
+  const words = video.title.split(' ').filter(Boolean).slice(0, 4).join(' ')
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#120A2D]">
+      <div className="absolute -left-10 -top-10 h-36 w-36 rounded-full bg-primary/45 blur-3xl" />
+      <div className="absolute -bottom-12 right-0 h-40 w-40 rounded-full bg-brand-accent/30 blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(167,139,250,0.24),transparent_48%)]" />
+      <div className="relative flex h-full flex-col justify-between p-5">
+        <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-1 backdrop-blur-sm">
+          <SocialIcon id="youtube" size={14} />
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">Видео</span>
+        </div>
+        <p className="max-w-[80%] font-display text-lg font-extrabold leading-tight tracking-[-0.03em] text-white sm:text-xl">
+          {words}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ============================================================================
 // 3D TILT VIDEO CARD
 // ============================================================================
 
 function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number; onPlay: (v: VideoItem) => void }) {
   const reduced = useReducedMotion()
+  const [coverSrc, setCoverSrc] = useState(video.cover)
+  const [coverFailed, setCoverFailed] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const spotlightRef = useRef<HTMLDivElement>(null)
   const borderRef = useRef<HTMLDivElement>(null)
@@ -576,13 +599,23 @@ function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number
 
             {/* Thumbnail */}
             <div className="relative aspect-video overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={video.cover}
-                alt={video.coverAlt}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.6s ease' }}
-              />
+              {coverFailed ? (
+                <VideoThumbnailFallback video={video} />
+              ) : (
+                <img
+                  src={coverSrc}
+                  alt={video.coverAlt}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.6s ease' }}
+                  onError={() => {
+                    if (coverSrc.includes('/maxresdefault.jpg')) {
+                      setCoverSrc(coverSrc.replace('/maxresdefault.jpg', '/hqdefault.jpg'))
+                      return
+                    }
+                    setCoverFailed(true)
+                  }}
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0D0925] via-[#0D0925]/20 to-transparent" />
               <div
                 aria-hidden
