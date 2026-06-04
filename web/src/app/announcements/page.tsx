@@ -352,8 +352,8 @@ export default function AnnouncementsPage() {
     })
   }, [activeCategory])
 
-  const visibleAnnouncements = filtered
-  const showLoadingCard = activeCategory === 'all'
+  const visibleAnnouncements = filtered.filter((item) => item.id === 'diva-alexey')
+  const showLoadingCard = activeCategory === 'all' || activeCategory === 'fullstack'
 
   return (
     <div className="relative min-h-screen noise-overlay -mt-[80px] pt-[80px] sm:-mt-[88px] sm:pt-[88px]" style={{ backgroundColor: 'var(--brand-ink)' }}>
@@ -576,17 +576,13 @@ export default function AnnouncementsPage() {
                     className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-6 py-12 text-center"
                   >
                     <div className="relative flex h-12 w-12 items-center justify-center">
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-transparent"
-                        style={{ borderTopColor: 'rgba(167,139,250,0.8)', borderRightColor: 'rgba(167,139,250,0.28)' }}
-                        animate={reduced ? undefined : { rotate: 360 }}
-                        transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+                      <div
+                        className="announcement-loading-spinner absolute inset-0 rounded-full border-2 border-transparent"
+                        style={{ borderTopColor: 'rgba(167,139,250,0.9)', borderRightColor: 'rgba(167,139,250,0.28)' }}
                       />
-                      <motion.div
-                        className="absolute inset-2 rounded-full border border-transparent"
-                        style={{ borderTopColor: 'rgba(251,146,60,0.58)' }}
-                        animate={reduced ? undefined : { rotate: -360 }}
-                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
+                      <div
+                        className="announcement-loading-spinner-reverse absolute inset-2 rounded-full border border-transparent"
+                        style={{ borderTopColor: 'rgba(251,146,60,0.68)' }}
                       />
                       <motion.span
                         className="h-1.5 w-1.5 rounded-full bg-brand-soft"

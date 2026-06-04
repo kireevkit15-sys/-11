@@ -389,8 +389,6 @@ function FaqItem({
   isOpen: boolean
   onToggle: () => void
 }) {
-  const reduced = useReducedMotion()
-
   return (
     <div
       className={cn(
@@ -437,37 +435,27 @@ function FaqItem({
         </motion.span>
       </button>
 
-      {/* A-row — двухфазное раскрытие:
-          1. Контейнер растёт по height (spring — органичная физика)
-          2. Текст ответа въезжает с лёгким y-offset чуть позже */}
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={reduced ? false : { height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={reduced ? undefined : { height: 0, opacity: 0 }}
-            transition={{
-              height: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-              opacity: { duration: 0.2, ease: 'easeOut' },
-            }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-[40px_1fr_24px] gap-2 sm:grid-cols-[80px_1fr_28px] sm:gap-5">
-              <span aria-hidden />
-              <motion.p
-                initial={reduced ? false : { y: 6, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={reduced ? undefined : { y: 2, opacity: 0 }}
-                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="pb-7 pr-1 text-[15px] leading-relaxed text-white/72 sm:text-base sm:leading-[1.65]"
-              >
-                {qa.a}
-              </motion.p>
-              <span aria-hidden />
-            </div>
-          </motion.div>
+      <div
+        className={cn(
+          'grid overflow-hidden transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
+          isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
         )}
-      </AnimatePresence>
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="grid grid-cols-[40px_1fr_24px] gap-2 sm:grid-cols-[80px_1fr_28px] sm:gap-5">
+            <span aria-hidden />
+            <p
+              className={cn(
+                'pb-7 pr-1 text-[15px] leading-relaxed text-white/72 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:text-base sm:leading-[1.65]',
+                isOpen ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0',
+              )}
+            >
+              {qa.a}
+            </p>
+            <span aria-hidden />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

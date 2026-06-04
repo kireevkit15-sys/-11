@@ -608,6 +608,24 @@
   will-change: opacity, transform;
 }
 
+@keyframes announcement-loading-spin {
+  to { transform: rotate(360deg); }
+}
+.announcement-loading-spinner {
+  animation: announcement-loading-spin 1.35s linear infinite;
+  will-change: transform;
+}
+.announcement-loading-spinner-reverse {
+  animation: announcement-loading-spin 2s linear infinite reverse;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .announcement-loading-spinner,
+  .announcement-loading-spinner-reverse {
+    animation-duration: 3s;
+  }
+}
+
 /* Announcement cards: smooth CSS-driven border rotation without per-card RAF */
 @property --announcement-card-angle {
   syntax: '<angle>';
