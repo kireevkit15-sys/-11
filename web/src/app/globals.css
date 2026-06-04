@@ -380,11 +380,12 @@
   }
 
   /* ---------------------------------------------------------------------------
-   * Service-card hover-scroll: на десктопе высота фиксирована, контент скроллится
-   * при ховере. На мобильных карточка сама растягивается, скролл не нужен.
+   * Service-card scroll: на десктопе высота фиксирована, поэтому тело карточки
+   * всегда остаётся прокручиваемым. Fade снизу только подсказывает про контент.
    * ------------------------------------------------------------------------- */
   .service-card-scroll {
-    overflow-y: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgba(167, 139, 250, 0.30) transparent;
     /* Маска снизу для красивого fade — намёк, что есть ещё контент */
@@ -405,12 +406,10 @@
   .service-card-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(167, 139, 250, 0.50);
   }
-  /* Активируем скролл только на >= lg при ховере родительского .group/card */
+  /* Fade-маска полностью раскрывается при ховере родительского .group/card */
   @media (min-width: 1024px) {
     .group\/card:hover .service-card-scroll,
     .group\/card:focus-within .service-card-scroll {
-      overflow-y: auto;
-      /* Fade-маска полностью раскрывается при ховере */
       -webkit-mask-image: linear-gradient(to bottom, black 0, black 100%, transparent 100%);
       mask-image: linear-gradient(to bottom, black 0, black 100%, transparent 100%);
     }

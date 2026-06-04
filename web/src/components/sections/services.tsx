@@ -244,8 +244,8 @@ function NormalCard({ service, index, reduced }: { service: Service; index: numb
         </div>
 
         {/* ── SCROLLABLE BODY ─────────────────────── */}
-        <div className="relative z-10 flex-1 lg:min-h-0">
-          <div className="h-full px-5 pb-4 sm:px-7 sm:pb-6">
+        <div className="relative z-10 flex-1 overflow-hidden lg:min-h-0">
+          <div className="service-card-scroll h-full px-5 pb-4 pr-2 sm:px-7 sm:pb-6">
             <h4 className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand-accent">
               Перечень отчётов и работ
             </h4>
