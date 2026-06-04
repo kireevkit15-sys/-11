@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
+import Image from 'next/image'
 import type { ReactElement } from 'react'
 import { motion, useReducedMotion, useInView } from 'motion/react'
 import { Play, ArrowUpRight } from '@phosphor-icons/react'
@@ -618,12 +619,13 @@ function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number
               {coverFailed ? (
                 <VideoThumbnailFallback video={video} />
               ) : (
-                <img
+                <Image
                   src={coverSrc}
                   alt={video.coverAlt}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover"
                   style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.6s ease' }}
-                  loading="lazy"
                   onError={() => setCoverIndex((current) => current + 1)}
                   onLoad={(event) => {
                     const isHighTier = coverSrc.includes('/maxresdefault.jpg') || coverSrc.includes('/sddefault.jpg')
