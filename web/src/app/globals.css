@@ -521,11 +521,11 @@
 }
 
 .footer-robot-hand {
-  top: 42%;
+  top: 43%;
   bottom: auto;
-  right: -30%;
-  width: min(125%, 520px);
-  height: 360px;
+  right: -18%;
+  width: min(132%, 560px);
+  height: 370px;
   transform: translateY(-42%);
 }
 
@@ -533,10 +533,10 @@
   .footer-robot-hand {
     top: -12%;
     bottom: -12%;
-    right: -6%;
-    width: min(72%, 940px);
+    right: -18%;
+    width: min(76%, 940px);
     height: auto;
-    transform: translateX(-40%);
+    transform: none;
   }
 }
 

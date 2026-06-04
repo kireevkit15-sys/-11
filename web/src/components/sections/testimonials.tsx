@@ -287,8 +287,8 @@ export function TestimonialsSection() {
   const [selected, setSelected] = useState<Testimonial | null>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const scrollRaf = useRef<number | null>(null)
 
-  const CARD_W = 380
   const GAP = 20
 
   // Responsive card width: 380px on desktop, full-width on mobile
@@ -315,7 +315,8 @@ export function TestimonialsSection() {
       setActive(a => {
         const next = (a + 1) % testimonials.length
         if (trackRef.current) {
-          trackRef.current.scrollTo({ left: next * (CARD_W + GAP), behavior: 'smooth' })
+          const cardWidth = getCardWidth()
+          trackRef.current.scrollTo({ left: next * (cardWidth + GAP), behavior: 'smooth' })
         }
         return next
       })
@@ -325,6 +326,25 @@ export function TestimonialsSection() {
 
   const pauseAuto = useCallback(() => {
     if (autoRef.current) clearInterval(autoRef.current)
+  }, [])
+
+  const syncActiveFromScroll = useCallback(() => {
+    const el = trackRef.current
+    if (!el) return
+    const cardWidth = getCardWidth()
+    const idx = Math.round(el.scrollLeft / (cardWidth + GAP))
+    const clamped = Math.max(0, Math.min(testimonials.length - 1, idx))
+    setActive(prev => (prev === clamped ? prev : clamped))
+  }, [])
+
+  const onTrackScroll = useCallback(() => {
+    pauseAuto()
+    if (scrollRaf.current !== null) cancelAnimationFrame(scrollRaf.current)
+    scrollRaf.current = requestAnimationFrame(syncActiveFromScroll)
+  }, [pauseAuto, syncActiveFromScroll])
+
+  useEffect(() => () => {
+    if (scrollRaf.current !== null) cancelAnimationFrame(scrollRaf.current)
   }, [])
 
   return (
@@ -382,6 +402,7 @@ export function TestimonialsSection() {
         <div
           ref={trackRef}
           onMouseEnter={pauseAuto}
+          onScroll={onTrackScroll}
           className="scrollbar-hide -mx-4 flex gap-5 overflow-x-auto px-4 sm:-mx-6 sm:px-6"
           style={{ scrollSnapType: 'x mandatory' }}
         >

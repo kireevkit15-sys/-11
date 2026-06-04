@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import Image from 'next/image'
 import type { ReactElement } from 'react'
-import { motion, useReducedMotion, useInView } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { Play, ArrowUpRight } from '@phosphor-icons/react'
 
 import { cn } from '@/lib/utils'
@@ -31,7 +31,7 @@ type SocialLink = {
   id: string
   label: string
   href: string
-  followers: string
+  action: string
   icon: 'vk' | 'tg' | 'youtube' | 'rutube'
 }
 
@@ -120,10 +120,10 @@ const videos: VideoItem[] = [
 ]
 
 const socialLinks: SocialLink[] = [
-  { id: 'vk', label: 'ВКонтакте', href: 'https://vk.com/ac_diva', followers: '1840', icon: 'vk' },
-  { id: 'tg', label: 'Telegram', href: 'https://t.me/diva_accounting', followers: '620', icon: 'tg' },
-  { id: 'youtube', label: 'YouTube', href: 'https://youtube.com/channel/UCLDax7nGHf8K1AiP23Z00sA', followers: '1200', icon: 'youtube' },
-  { id: 'rutube', label: 'RuTube', href: 'https://rutube.ru/channel/diva-accounting', followers: '340', icon: 'rutube' },
+  { id: 'vk', label: 'ВКонтакте', href: 'https://vk.com/ac_diva', action: 'отзывы и новости', icon: 'vk' },
+  { id: 'tg', label: 'Telegram', href: 'https://t.me/diva_accounting', action: 'быстрые разборы', icon: 'tg' },
+  { id: 'youtube', label: 'YouTube', href: 'https://youtube.com/channel/UCLDax7nGHf8K1AiP23Z00sA', action: 'видео-инструкции', icon: 'youtube' },
+  { id: 'rutube', label: 'RuTube', href: 'https://rutube.ru/channel/diva-accounting', action: 'записи эфиров', icon: 'rutube' },
 ]
 
 // ============================================================================
@@ -445,42 +445,6 @@ function CursorTrail() {
   return <div ref={containerRef} className="pointer-events-none fixed inset-0 z-[9999]" aria-hidden />
 }
 
-// ============================================================================
-// ANIMATED COUNTER — RAF + textContent, no React re-renders per frame
-// ============================================================================
-
-function AnimatedCounter({ value, duration = 2000 }: { value: string; duration?: number }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-100px' })
-  const reduced = useReducedMotion()
-  const startedRef = useRef(false)
-
-  useEffect(() => {
-    if (!inView || reduced || startedRef.current) return
-    startedRef.current = true
-
-    const num = parseInt(value.replace(/\s/g, ''), 10)
-    const start = Date.now()
-    const el = ref.current
-    if (!el) return
-
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / duration, 1)
-      const ease = 1 - Math.pow(1 - p, 3)
-      const current = Math.round(num * ease)
-      // Direct DOM write — no setState, no re-render
-      el.textContent = current.toLocaleString('ru-RU')
-      if (p < 1) requestAnimationFrame(tick)
-    }
-
-    requestAnimationFrame(tick)
-  }, [inView, value, duration, reduced])
-
-  // Set final value on mount if already in view
-  const initial = reduced ? Number(value).toLocaleString('ru-RU') : '0'
-  return <span ref={ref}>{initial}</span>
-}
-
 function VideoThumbnailFallback({ video }: { video: VideoItem }) {
   const words = video.title.split(' ').filter(Boolean).slice(0, 4).join(' ')
 
@@ -746,11 +710,10 @@ function SocialCard({ link, index }: { link: SocialLink; index: number }) {
 
       <div className="min-w-0 flex-1">
         <p className="font-display text-sm font-semibold text-white sm:text-base">{link.label}</p>
-        <div className="mt-1 flex items-baseline gap-1 sm:gap-2">
-          <span className="font-mono text-base font-bold sm:text-xl" style={{ color: colors.main }}>
-            <AnimatedCounter value={link.followers} />
+        <div className="mt-1 flex items-center gap-1.5">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-xs" style={{ color: colors.main }}>
+            {link.action}
           </span>
-          <span className="font-mono text-[10px] text-white/50 sm:text-xs sm:ml-1">подписчиков</span>
         </div>
       </div>
 
@@ -817,11 +780,11 @@ export function ContentSection() {
           {/* Social section */}
           <FadeIn delay={0.4}>
             <div
-              className="relative mt-24 overflow-hidden rounded-3xl p-px"
+              className="relative mt-16 overflow-hidden rounded-3xl p-px sm:mt-24"
               style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.4) 0%, rgba(167,139,250,0.2) 50%, rgba(251,146,60,0.3) 100%)' }}
             >
               <div
-                className="rounded-[22px] p-8 sm:p-10"
+                className="rounded-[22px] p-5 sm:p-10"
                 style={{ background: 'rgba(15,11,30,0.98)', backdropFilter: 'blur(40px)' }}
               >
                 <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">

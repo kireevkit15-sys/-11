@@ -343,7 +343,6 @@ function RobotNeonRing() {
 }
 
 export default function AnnouncementsPage() {
-  const reduced = useReducedMotion()
   const [activeCategory, setActiveCategory] = useState<Announcement['category'] | 'all'>('all')
 
   const filtered = useMemo(() => {
@@ -384,15 +383,13 @@ export default function AnnouncementsPage() {
         <motion.img
           src="/announcements/robot.png"
           alt=""
-          className="absolute left-1/2 top-0 h-[330px] w-[330px] -translate-x-1/2 select-none object-contain opacity-65"
+          className="absolute left-1/2 top-0 h-[310px] w-[310px] -translate-x-1/2 select-none object-contain opacity-58"
           style={{
             mixBlendMode: 'screen',
-            filter: 'drop-shadow(0 0 36px rgba(167,139,250,0.45)) brightness(1.08)',
+            filter: 'drop-shadow(0 0 24px rgba(167,139,250,0.34)) brightness(1.05)',
             WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 64%, transparent 96%)',
             maskImage: 'linear-gradient(to bottom, black 0%, black 64%, transparent 96%)',
           }}
-          animate={reduced ? undefined : { y: [0, -8, 0] }}
-          transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
@@ -526,7 +523,7 @@ export default function AnnouncementsPage() {
           initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="pb-8"
-          style={{ marginTop: 'max(32px, calc(100vh - 440px))' }}
+          style={{ marginTop: 'clamp(24px, 22vh, 180px)' }}
         >
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-24 text-center">

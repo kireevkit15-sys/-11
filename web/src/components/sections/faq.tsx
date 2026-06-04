@@ -450,15 +450,15 @@ function FaqItem({
                 height: 'auto',
                 opacity: 1,
                 transition: {
-                  height: { type: 'spring', stiffness: 110, damping: 22, mass: 0.9 },
-                  opacity: { duration: 0.35, delay: 0.08, ease: [0.22, 1, 0.36, 1] },
+                  height: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                  opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
                 },
               },
               collapsed: {
                 height: 0,
                 opacity: 0,
                 transition: {
-                  height: { duration: 0.4, ease: [0.55, 0, 0.35, 1] },
+                  height: { duration: 0.18, ease: [0.4, 0, 1, 1] },
                   opacity: { duration: 0.18, ease: [0.4, 0, 1, 1] },
                 },
               },
@@ -468,22 +468,20 @@ function FaqItem({
             <div className="grid grid-cols-[40px_1fr_24px] gap-2 sm:grid-cols-[80px_1fr_28px] sm:gap-5">
               <span aria-hidden />
               <motion.p
-                initial={{ y: 14, opacity: 0, filter: 'blur(3px)' }}
+                initial={{ y: 8, opacity: 0 }}
                 animate={{
                   y: 0,
                   opacity: 1,
-                  filter: 'blur(0px)',
                   transition: {
-                    duration: 0.55,
-                    delay: 0.18,
+                    duration: 0.22,
+                    delay: 0.04,
                     ease: [0.22, 1, 0.36, 1],
                   },
                 }}
                 exit={{
-                  y: 4,
+                  y: 2,
                   opacity: 0,
-                  filter: 'blur(2px)',
-                  transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
+                  transition: { duration: 0.14, ease: [0.4, 0, 1, 1] },
                 }}
                 className="pb-7 pr-1 text-[15px] leading-relaxed text-white/72 sm:text-base sm:leading-[1.65]"
               >

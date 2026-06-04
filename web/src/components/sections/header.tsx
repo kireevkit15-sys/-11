@@ -101,10 +101,10 @@ export function Header() {
         initial={reduced ? false : { y: -16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="pointer-events-none sticky top-0 z-50 flex justify-center px-3 pt-3 sm:px-4 sm:pt-4"
+        className="pointer-events-none sticky top-0 z-50 flex justify-center px-0 pt-3 sm:px-4 sm:pt-4"
       >
         <div
-          className="pointer-events-auto relative mx-auto grid w-[min(calc(100vw-24px),920px)] grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[36px] px-4 py-2.5 sm:gap-4 sm:px-5"
+          className="pointer-events-auto relative mx-auto grid w-[calc(100vw-24px)] max-w-[920px] grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[30px] px-3 py-2.5 sm:w-[min(calc(100vw-32px),920px)] sm:gap-4 sm:rounded-[36px] sm:px-5"
           style={{
             background: 'linear-gradient(165deg, rgba(48,36,86,0.55) 0%, rgba(22,16,42,0.72) 45%, rgba(8,5,18,0.88) 100%)',
             WebkitBackdropFilter: 'blur(32px) saturate(180%)',

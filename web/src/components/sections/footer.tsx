@@ -142,10 +142,10 @@ export function Footer() {
           <div
             className="absolute hidden md:block"
             style={{
-              top: '38%',
-              right: '58%',
-              width: '460px',
-              height: '460px',
+              top: '34%',
+              right: '44%',
+              width: '420px',
+              height: '420px',
               background:
                 'radial-gradient(circle, rgba(251,146,60,0.55), rgba(251,146,60,0.20) 35%, transparent 65%)',
               filter: 'blur(54px)',

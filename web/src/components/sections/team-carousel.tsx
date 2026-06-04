@@ -961,15 +961,29 @@ function GroupBlock({
           {group.members.map((m, i) => {
             const memberId = `${group.id}-${i}`
             return (
-              <MemberCard
-                key={memberId}
-                member={m}
-                memberId={memberId}
-                index={startIndex + i}
-                isOpen={openId === memberId}
-                isAnyOpen={openId !== null && openId.startsWith(group.id + '-')}
-                onToggle={() => onToggle(memberId)}
-              />
+              <div key={memberId} className="contents">
+                <MemberCard
+                  member={m}
+                  memberId={memberId}
+                  index={startIndex + i}
+                  isOpen={openId === memberId}
+                  isAnyOpen={openId !== null && openId.startsWith(group.id + '-')}
+                  onToggle={() => onToggle(memberId)}
+                />
+                <AnimatePresence>
+                  {openId === memberId && m.details && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0, transition: { duration: 0.25, ease: SMOOTH_OUT } }}
+                      exit={{ opacity: 0, y: 6, transition: { duration: 0.18, ease: FAST_EASE } }}
+                      className="col-span-2 sm:col-span-3 lg:hidden"
+                      data-member-id={`${memberId}-details`}
+                    >
+                      <MemberDetailPanel member={m} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )
           })}
         </motion.div>
@@ -981,7 +995,7 @@ function GroupBlock({
               initial={{ opacity: 0, y: 8, filter: 'blur(6px)' }}
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.45, ease: SMOOTH_OUT } }}
               exit={{ opacity: 0, y: 8, filter: 'blur(6px)', transition: { duration: 0.28, ease: FAST_EASE } }}
-              className="relative z-20 mt-4 lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:mt-0"
+              className="relative z-20 mt-4 hidden lg:absolute lg:bottom-0 lg:left-0 lg:right-0 lg:mt-0 lg:block"
             >
               <MemberDetailPanel member={activeMember} />
             </motion.div>

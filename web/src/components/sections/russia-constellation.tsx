@@ -591,7 +591,7 @@ export function RussiaConstellation() {
           Вертикальные дивайдеры — neon-вспышка цвета округа на hover.
           Топовая color-линия каждой ячейки — всегда подсвечена. */}
       <div
-        className="mt-12 grid grid-cols-9 border-y border-brand-soft/25 [&>*]:border-l [&>*]:border-brand-soft/15 [&>*:first-child]:border-l-0"
+        className="mt-8 grid grid-cols-3 overflow-hidden rounded-2xl border border-brand-soft/20 sm:mt-12 sm:grid-cols-9 sm:rounded-none sm:border-y sm:border-x-0 sm:border-brand-soft/25 [&>*]:border-l [&>*]:border-t [&>*]:border-brand-soft/15 [&>*:nth-child(-n+3)]:border-t-0 sm:[&>*]:border-t-0 sm:[&>*:first-child]:border-l-0"
         style={{
           boxShadow:
             '0 0 18px rgba(167,139,250,0.18), inset 0 0 0 1px rgba(167,139,250,0.06)',
@@ -610,7 +610,7 @@ export function RussiaConstellation() {
               onMouseLeave={() => setHovered(null)}
               onFocus={() => setHovered(code)}
               onBlur={() => setHovered(null)}
-              className={`group relative flex flex-col items-center gap-1.5 px-2 py-3.5 transition-colors ${
+              className={`group relative flex min-h-[72px] flex-col items-center justify-center gap-1 px-2 py-3 transition-colors sm:min-h-0 sm:gap-1.5 sm:py-3.5 ${
                 isHovered ? 'bg-white/[0.04]' : ''
               }`}
               style={{
@@ -631,12 +631,12 @@ export function RussiaConstellation() {
                 }}
               />
               {/* Mono label сверху */}
-              <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-white/45">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55 sm:text-[9px] sm:tracking-[0.2em]">
                 {d.shortName}
               </span>
               {/* Display число снизу — крупное, в цвете округа */}
               <span
-                className="font-display text-[22px] font-extrabold leading-none tabular-nums tracking-[-0.03em] transition-all duration-300"
+                className="font-display text-[18px] font-extrabold leading-none tabular-nums tracking-[-0.03em] transition-all duration-300 sm:text-[22px]"
                 style={{
                   color: d.color,
                   textShadow: isHovered ? `0 0 14px ${d.color}80` : 'none',
@@ -649,17 +649,17 @@ export function RussiaConstellation() {
         })}
 
         {/* ИТОГ — отдельная ячейка с коралловым неон-акцентом */}
-        <div className="relative flex flex-col items-center gap-1.5 bg-white/[0.03] px-2 py-3.5">
+        <div className="relative flex min-h-[72px] flex-col items-center justify-center gap-1 bg-white/[0.03] px-2 py-3 sm:min-h-0 sm:gap-1.5 sm:py-3.5">
           <span
             aria-hidden
             className="absolute left-0 right-0 top-0 h-px bg-brand-accent"
             style={{ boxShadow: '0 0 10px rgba(251,146,60,0.7), 0 1px 4px rgba(251,146,60,0.4)' }}
           />
-          <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-white/55">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 sm:text-[9px] sm:tracking-[0.2em]">
             всего
           </span>
           <span
-            className="font-display text-[22px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-white"
+            className="font-display text-[18px] font-extrabold leading-none tabular-nums tracking-[-0.03em] text-white sm:text-[22px]"
             style={{ textShadow: '0 0 12px rgba(251,146,60,0.45)' }}
           >
             {TOTAL_CLIENTS}
