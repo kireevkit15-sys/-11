@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { ConsultModal } from '@/components/sections/consult-modal'
+import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------------------
 // Types & data — состав работ дословно с сайта-референса (accounting-diva3d.ru,
@@ -165,8 +166,11 @@ export function ServicesSection() {
             Состав отчётов и работ для каждой системы — как они есть. Точную
             стоимость рассчитаем под количество операций и сотрудников на
             30-минутной консультации.{' '}
-            <span className="font-mono text-[13px] uppercase tracking-[0.18em] text-brand-soft">
+            <span className="hidden font-mono text-[13px] uppercase tracking-[0.18em] text-brand-soft sm:inline">
               наведите на карточку — пролистайте детали
+            </span>
+            <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-brand-soft sm:hidden">
+              раскройте карточку — покажем весь перечень
             </span>
           </p>
         </FadeIn>
@@ -203,6 +207,7 @@ function NormalCard({
   onOpenConsult: () => void
 }) {
   const Icon = service.icon
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <motion.article
@@ -268,10 +273,13 @@ function NormalCard({
               Перечень отчётов и работ
             </h4>
             <ul className="flex flex-col gap-2.5">
-              {service.items.map((item) => (
+              {service.items.map((item, itemIndex) => (
                 <li
                   key={item}
-                  className="flex items-start gap-2.5 text-[13px] leading-snug text-white/80"
+                  className={cn(
+                    'items-start gap-2.5 text-[13px] leading-snug text-white/80 lg:flex',
+                    expanded || itemIndex < 4 ? 'flex' : 'hidden',
+                  )}
                 >
                   <CheckCircle
                     weight="duotone"
@@ -281,6 +289,15 @@ function NormalCard({
                 </li>
               ))}
             </ul>
+            {service.items.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setExpanded((value) => !value)}
+                className="mt-4 inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/[0.04] px-4 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-soft transition hover:border-brand-soft/40 hover:bg-brand-soft/10 lg:hidden"
+              >
+                {expanded ? 'Свернуть перечень' : `Показать ещё ${service.items.length - 4}`}
+              </button>
+            )}
           </div>
         </div>
 
@@ -289,7 +306,7 @@ function NormalCard({
           <button
             type="button"
             onClick={onOpenConsult}
-            className="group/link inline-flex items-center gap-1.5 font-mono text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:text-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft/60 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-ink"
+            className="group/link inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-2xl border border-brand-soft/25 bg-brand-soft/10 px-4 font-mono text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:bg-brand-soft/15 hover:text-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft/60 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-ink sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0"
           >
             Подробнее о тарифе
             <ArrowUpRight

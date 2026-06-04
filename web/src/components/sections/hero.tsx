@@ -14,10 +14,19 @@ export function HeroSection() {
 
   return (
     <section className="relative isolate -mt-[80px] flex min-h-[100svh] items-center overflow-hidden bg-aurora-dark noise-overlay sm:-mt-[88px]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[46%] justify-center sm:hidden"
+      >
+        <div className="relative w-[min(116vw,520px)] translate-y-[18%] opacity-70 [mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.95)_0%,rgba(0,0,0,0.78)_58%,transparent_100%)]">
+          <HeroFigure />
+        </div>
+      </div>
+
       {/* ───── Фигурка как backdrop: приподнята вверх под шапку, слегка растянута ───── */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 flex justify-center"
+        className="pointer-events-none absolute inset-x-0 top-0 hidden justify-center sm:flex"
         style={{ height: '95%' }}
       >
         <div
@@ -39,7 +48,7 @@ export function HeroSection() {
       />
 
       {/* ───── Контент ───── */}
-      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-5 px-4 pt-24 pb-16 text-center sm:gap-7 sm:px-6 sm:pt-36 sm:pb-24">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center gap-4 px-4 pb-[42vh] pt-28 text-center sm:gap-7 sm:px-6 sm:pb-24 sm:pt-36">
         <motion.span
           initial={reduced ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,7 +65,7 @@ export function HeroSection() {
           initial={reduced ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease, delay: 0.05 }}
-          className="font-display text-[32px] font-extrabold leading-[1.02] tracking-[-0.04em] text-white sm:text-[60px] md:text-[72px] lg:text-[80px]"
+          className="font-display text-[34px] font-extrabold leading-[0.98] tracking-[-0.045em] text-white sm:text-[60px] md:text-[72px] lg:text-[80px]"
           style={{
             textShadow:
               '0 2px 24px rgba(15, 11, 30, 0.65), 0 0 40px rgba(15, 11, 30, 0.4)',
@@ -82,7 +91,7 @@ export function HeroSection() {
           initial={reduced ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease, delay: 0.15 }}
-          className="glass-card-dark max-w-2xl rounded-2xl px-5 py-3 text-lg leading-relaxed text-white/85 sm:text-xl"
+          className="glass-card-dark max-w-2xl rounded-2xl px-4 py-3 text-base leading-relaxed text-white/85 sm:px-5 sm:text-xl"
         >
           Возьмём бухгалтерию и отчётность по грантам ФСИ. Бесплатная консультация — 30 минут с экспертом. Без обязательств.
         </motion.p>
@@ -91,26 +100,33 @@ export function HeroSection() {
           initial={reduced ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease, delay: 0.25 }}
-          className="mt-2 flex flex-col items-center gap-5 sm:flex-row sm:justify-center sm:gap-6"
+          className="mt-1 flex w-full flex-col items-center gap-3 sm:mt-2 sm:w-auto sm:flex-row sm:justify-center sm:gap-6"
         >
           <Button
             size="lg"
             onClick={() => setModalOpen(true)}
-            className="h-12 bg-primary px-7 text-[15px] font-semibold shadow-lg shadow-primary/40 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/55"
+            className="h-12 w-full max-w-[320px] bg-primary px-7 text-[15px] font-semibold shadow-lg shadow-primary/40 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/55 sm:w-auto"
           >
             Записаться на консультацию
           </Button>
         </motion.div>
 
-        <motion.p
+        <motion.div
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, ease, delay: 0.35 }}
-          className="glass-card-dark flex items-center gap-2 rounded-full px-3 py-1 text-xs text-white/70"
+          className="flex flex-wrap items-center justify-center gap-2"
         >
-          <span className="font-mono font-semibold text-brand-soft">94%</span>
-          клиентов остаются после консультации
-        </motion.p>
+          {['30 минут', 'без обязательств', 'ФСИ и налоги'].map((item) => (
+            <span key={item} className="glass-card-dark rounded-full px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+              {item}
+            </span>
+          ))}
+          <span className="glass-card-dark flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-white/70">
+            <span className="font-mono font-semibold text-brand-soft">94%</span>
+            остаются
+          </span>
+        </motion.div>
       </div>
 
       <AnimatePresence>

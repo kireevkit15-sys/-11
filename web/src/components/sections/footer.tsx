@@ -206,7 +206,20 @@ export function Footer() {
 
           {/* RIGHT — newsletter + trust marks */}
           <FadeIn delay={0.15}>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <div id="lead-magnet" className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div aria-hidden className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-[28px] border border-brand-soft/20 bg-gradient-to-br from-brand-soft/25 via-white/5 to-brand-accent/20 p-3 opacity-80 rotate-6">
+                <div className="h-full rounded-2xl border border-white/10 bg-brand-ink/70 p-3 shadow-2xl shadow-primary/30">
+                  <div className="h-1.5 w-12 rounded-full bg-brand-accent/80" />
+                  <div className="mt-3 space-y-1.5">
+                    <div className="h-1 w-full rounded-full bg-white/30" />
+                    <div className="h-1 w-4/5 rounded-full bg-white/20" />
+                    <div className="h-1 w-3/5 rounded-full bg-brand-soft/35" />
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-1">
+                    {Array.from({ length: 6 }).map((_, i) => <span key={i} className="h-3 rounded bg-white/10" />)}
+                  </div>
+                </div>
+              </div>
               <SectionEyebrow variant="dark">Подписка</SectionEyebrow>
               <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-white">
                 Чек-лист грантополучателя ФСИ + календарь дедлайнов 2026
@@ -237,7 +250,7 @@ export function Footer() {
                   aria-busy={checklistSubmitting}
                   className="group h-11 bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
                 >
-                  {checklistSubmitting ? 'Отправляем...' : checklistSent ? 'Чек-лист отправлен' : 'Скачать чек-лист'}
+                  {checklistSubmitting ? 'Отправляем...' : checklistSent ? 'Заявка принята' : 'Получить чек-лист'}
                   <PaperPlaneTilt weight="duotone" className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </Button>
                 {checklistSent && (

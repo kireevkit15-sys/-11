@@ -196,7 +196,18 @@ export function FaqSection() {
 
       <div className="relative mx-auto max-w-6xl px-4 py-28 sm:px-6 sm:py-36">
         {/* Header */}
-        <FadeIn className="max-w-3xl">
+        <FadeIn className="relative max-w-3xl">
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-14 h-32 w-32 opacity-55 sm:hidden">
+            <Image
+              src="/faq/holo-ribbon.webp"
+              alt=""
+              width={128}
+              height={128}
+              sizes="128px"
+              className="h-full w-full rotate-12 object-contain"
+              style={{ filter: 'drop-shadow(0 12px 24px rgba(124,58,237,0.35))' }}
+            />
+          </div>
           <SectionEyebrow number="05" variant="dark">
             Вопросы и ответы
           </SectionEyebrow>
@@ -226,7 +237,7 @@ export function FaqSection() {
                     type="button"
                     onClick={() => handleGroupChange(g.id)}
                     className={cn(
-                      'shrink-0 rounded-full border px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] transition-all duration-300',
+                      'min-h-11 shrink-0 rounded-full border px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] transition-all duration-300',
                       isActive
                         ? 'border-brand-soft/60 bg-brand-soft/15 text-brand-soft shadow-[0_0_18px_rgba(167,139,250,0.4)]'
                         : 'border-white/10 bg-white/[0.03] text-white/55 hover:text-white',

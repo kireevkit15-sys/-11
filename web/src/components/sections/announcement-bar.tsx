@@ -64,7 +64,7 @@ export function AnnouncementBar() {
       {/* Тонкий subtle accent line снизу для разделения */}
       <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-white/10" />
 
-      <div className="mx-auto flex h-9 max-w-7xl items-center justify-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-12 max-w-7xl items-center justify-center gap-2 px-3 py-2 sm:h-9 sm:min-h-0 sm:gap-3 sm:px-6 sm:py-0">
         <Icon weight="duotone" className="h-3.5 w-3.5 shrink-0 text-brand-accent" />
 
         <AnimatePresence mode="wait">
@@ -74,15 +74,15 @@ export function AnnouncementBar() {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? undefined : { opacity: 0, y: -4 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center gap-3 truncate"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 sm:flex-none sm:gap-3 sm:truncate"
           >
-            <span className="truncate font-mono text-[11px] font-medium tracking-wide text-white/85 sm:text-xs">
+            <span className="min-w-0 flex-1 text-balance font-mono text-[11px] font-semibold leading-snug tracking-wide text-white/88 sm:flex-none sm:truncate sm:text-xs">
               {text}
             </span>
             {cta && href && (
               <a
                 href={href}
-                className="group inline-flex shrink-0 items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-accent transition hover:text-white"
+                className="group inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full border border-brand-accent/25 bg-brand-accent/10 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-accent transition hover:text-white sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:text-[11px] sm:tracking-[0.18em]"
               >
                 {cta}
                 <ArrowRight

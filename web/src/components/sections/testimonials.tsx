@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
-import { CaretLeft, CaretRight, Quotes } from '@phosphor-icons/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { CaretLeft, CaretRight, Quotes, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
@@ -92,7 +92,15 @@ function Avatar({ name, size = 48 }: { name: string; size?: number }) {
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean }) {
+function TestimonialCard({
+  t,
+  isActive,
+  onReadFull,
+}: {
+  t: Testimonial
+  isActive: boolean
+  onReadFull: () => void
+}) {
   const reduced = useReducedMotion()
   const cardRef = useRef<HTMLDivElement>(null)
   const spotRef = useRef<HTMLDivElement>(null)
@@ -209,6 +217,13 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
           )}>
             {t.text}
           </p>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onReadFull() }}
+            className="relative z-10 mt-4 inline-flex min-h-10 items-center self-start rounded-full border border-white/10 bg-white/[0.04] px-3 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-brand-soft transition hover:border-brand-soft/40 hover:bg-brand-soft/10"
+          >
+            Читать полностью
+          </button>
 
           {/* Divider */}
           <div
@@ -269,6 +284,7 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
 export function TestimonialsSection() {
   const reduced = useReducedMotion()
   const [active, setActive] = useState(0)
+  const [selected, setSelected] = useState<Testimonial | null>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -312,7 +328,8 @@ export function TestimonialsSection() {
   }, [])
 
   return (
-    <section id="reviews" className="relative isolate overflow-hidden bg-aurora-dark noise-overlay text-white">
+    <>
+      <section id="reviews" className="relative isolate overflow-hidden bg-aurora-dark noise-overlay text-white">
       {/* Blobs */}
       <div className="blob blob-soft pointer-events-none absolute" style={{ top: '10%', left: '-5%', width: 500, height: 500, opacity: 0.3 }} aria-hidden />
       <div className="blob blob-coral pointer-events-none absolute" style={{ bottom: '5%', right: '-5%', width: 420, height: 420, opacity: 0.2 }} aria-hidden />
@@ -375,7 +392,7 @@ export function TestimonialsSection() {
               style={{ width: 'min(380px, calc(100vw - 32px))', minWidth: 'min(380px, calc(100vw - 32px))', scrollSnapAlign: 'start' }}
               onClick={() => { pauseAuto(); scrollTo(i) }}
             >
-              <TestimonialCard t={t} isActive={active === i} />
+              <TestimonialCard t={t} isActive={active === i} onReadFull={() => { pauseAuto(); setSelected(t) }} />
             </div>
           ))}
         </div>
@@ -411,6 +428,49 @@ export function TestimonialsSection() {
           </a>
         </FadeIn>
       </div>
-    </section>
+      </section>
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            className="fixed inset-0 z-[220] flex items-end justify-center bg-black/70 p-3 text-white sm:items-center sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              initial={reduced ? false : { opacity: 0, y: 28, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduced ? undefined : { opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-h-[82dvh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-brand-soft/25 bg-brand-ink p-5 shadow-2xl shadow-primary/40 sm:p-7"
+            >
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                aria-label="Закрыть отзыв"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white"
+              >
+                <X weight="bold" className="h-4 w-4" />
+              </button>
+              <Quotes weight="fill" className="h-9 w-9 text-brand-accent" />
+              <p className="mt-5 text-base leading-relaxed text-white/82 sm:text-lg">
+                {selected.text}
+              </p>
+              <div className="mt-6 flex items-center gap-3 border-t border-white/10 pt-5">
+                <Avatar name={selected.name} size={44} />
+                <div>
+                  <p className="font-display text-base font-bold text-white">{selected.name}</p>
+                  <a href={selected.vkUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-soft">
+                    отзыв во ВКонтакте →
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
