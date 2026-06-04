@@ -299,22 +299,23 @@ export function FaqSection() {
                 animate="visible"
                 exit={reduced ? undefined : 'exit'}
                 variants={{
-                  hidden: { opacity: 0 },
+                  hidden: { opacity: 0, y: 6 },
                   visible: {
                     opacity: 1,
+                    y: 0,
                     transition: {
-                      duration: 0.25,
-                      staggerChildren: 0.07,
-                      delayChildren: 0.08,
+                      duration: 0.26,
+                      ease: [0.22, 1, 0.36, 1],
+                      staggerChildren: 0.045,
+                      delayChildren: 0.03,
                     },
                   },
                   exit: {
                     opacity: 0,
+                    y: -4,
                     transition: {
-                      duration: 0.22,
+                      duration: 0.16,
                       ease: [0.4, 0, 0.6, 1],
-                      staggerChildren: 0.04,
-                      staggerDirection: -1,
                     },
                   },
                 }}
@@ -324,22 +325,20 @@ export function FaqSection() {
                   <motion.div
                     key={qa.q}
                     variants={{
-                      hidden: { opacity: 0, y: 14, filter: 'blur(4px)' },
+                      hidden: { opacity: 0, y: 10 },
                       visible: {
                         opacity: 1,
                         y: 0,
-                        filter: 'blur(0px)',
                         transition: {
-                          duration: 0.55,
+                          duration: 0.34,
                           ease: [0.22, 1, 0.36, 1],
                         },
                       },
                       exit: {
                         opacity: 0,
-                        y: -8,
-                        filter: 'blur(2px)',
+                        y: -4,
                         transition: {
-                          duration: 0.25,
+                          duration: 0.14,
                           ease: [0.4, 0, 1, 1],
                         },
                       },
@@ -390,6 +389,8 @@ function FaqItem({
   isOpen: boolean
   onToggle: () => void
 }) {
+  const reduced = useReducedMotion()
+
   return (
     <div
       className={cn(
@@ -442,47 +443,22 @@ function FaqItem({
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
-            initial="collapsed"
-            animate="open"
-            exit="collapsed"
-            variants={{
-              open: {
-                height: 'auto',
-                opacity: 1,
-                transition: {
-                  height: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-                  opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-                },
-              },
-              collapsed: {
-                height: 0,
-                opacity: 0,
-                transition: {
-                  height: { duration: 0.18, ease: [0.4, 0, 1, 1] },
-                  opacity: { duration: 0.18, ease: [0.4, 0, 1, 1] },
-                },
-              },
+            initial={reduced ? false : { height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={reduced ? undefined : { height: 0, opacity: 0 }}
+            transition={{
+              height: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+              opacity: { duration: 0.2, ease: 'easeOut' },
             }}
             className="overflow-hidden"
           >
             <div className="grid grid-cols-[40px_1fr_24px] gap-2 sm:grid-cols-[80px_1fr_28px] sm:gap-5">
               <span aria-hidden />
               <motion.p
-                initial={{ y: 8, opacity: 0 }}
-                animate={{
-                  y: 0,
-                  opacity: 1,
-                  transition: {
-                    duration: 0.22,
-                    delay: 0.04,
-                    ease: [0.22, 1, 0.36, 1],
-                  },
-                }}
-                exit={{
-                  y: 2,
-                  opacity: 0,
-                  transition: { duration: 0.14, ease: [0.4, 0, 1, 1] },
-                }}
+                initial={reduced ? false : { y: 6, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={reduced ? undefined : { y: 2, opacity: 0 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 className="pb-7 pr-1 text-[15px] leading-relaxed text-white/72 sm:text-base sm:leading-[1.65]"
               >
                 {qa.a}

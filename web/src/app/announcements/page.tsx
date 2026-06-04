@@ -343,6 +343,7 @@ function RobotNeonRing() {
 }
 
 export default function AnnouncementsPage() {
+  const reduced = useReducedMotion()
   const [activeCategory, setActiveCategory] = useState<Announcement['category'] | 'all'>('all')
 
   const filtered = useMemo(() => {
@@ -350,6 +351,9 @@ export default function AnnouncementsPage() {
       return activeCategory === 'all' || a.category === activeCategory
     })
   }, [activeCategory])
+
+  const visibleAnnouncements = filtered
+  const showLoadingCard = activeCategory === 'all'
 
   return (
     <div className="relative min-h-screen noise-overlay -mt-[80px] pt-[80px] sm:-mt-[88px] sm:pt-[88px]" style={{ backgroundColor: 'var(--brand-ink)' }}>
@@ -520,61 +524,84 @@ export default function AnnouncementsPage() {
 
         {/* Все карточки снизу после робота */}
         <motion.section
-          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="pb-8"
-          style={{ marginTop: 'clamp(24px, 22vh, 180px)' }}
+          initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.48, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-8 pb-8 sm:mt-10 lg:mt-12"
         >
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-24 text-center">
+          {visibleAnnouncements.length === 0 ? (
+            <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-3xl border border-white/[0.07] bg-white/[0.025] px-6 py-16 text-center">
               <Sparkle size={40} weight="duotone" className="text-white/20" />
               <p className="text-sm text-white/40">Ничего не найдено.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.filter(item => item.id === 'diva-alexey').map((item, i) => (
-                <motion.div key={item.id}
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                  className={cn(item.featured && 'sm:col-span-2 lg:col-span-2')}
-                >
-                  <AnnouncementCard item={item} featured={item.featured} />
-                </motion.div>
-              ))}
+            <motion.div
+              key={activeCategory}
+              layout
+              className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              transition={{ layout: { duration: 0.36, ease: [0.22, 1, 0.36, 1] } }}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {visibleAnnouncements.map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={reduced ? false : { opacity: 0, y: 18, scale: 0.985 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduced ? undefined : { opacity: 0, y: -10, scale: 0.985 }}
+                    transition={{
+                      duration: 0.42,
+                      delay: reduced ? 0 : Math.min(i * 0.045, 0.24),
+                      ease: [0.22, 1, 0.36, 1],
+                      layout: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+                    }}
+                    className={cn(item.featured && 'sm:col-span-2 lg:col-span-2')}
+                  >
+                    <AnnouncementCard item={item} featured={item.featured} />
+                  </motion.div>
+                ))}
 
-              {/* Placeholder — скоро специалисты */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-6 py-12 text-center"
-                style={{ minHeight: 220 }}
-              >
-                {/* Spinner */}
-                <div className="relative flex h-12 w-12 items-center justify-center">
+                {showLoadingCard && (
                   <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-transparent"
-                    style={{ borderTopColor: 'rgba(167,139,250,0.8)', borderRightColor: 'rgba(167,139,250,0.3)' }}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
-                  />
-                  <motion.div
-                    className="absolute inset-2 rounded-full border border-transparent"
-                    style={{ borderTopColor: 'rgba(251,146,60,0.6)' }}
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  />
-                  <motion.span
-                    className="h-1.5 w-1.5 rounded-full bg-brand-soft"
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{ duration: 1.2, repeat: Infinity }}
-                  />
-                </div>
-                <div>
-                  <p className="font-display text-[15px] font-semibold text-white/70">Подбираем проверенных специалистов</p>
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-white/25">Скоро появятся новые анкеты</p>
-                </div>
-              </motion.div>
-            </div>
+                    key="loading-more"
+                    layout
+                    initial={reduced ? false : { opacity: 0, y: 18, scale: 0.985 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduced ? undefined : { opacity: 0, y: -10, scale: 0.985 }}
+                    transition={{
+                      duration: 0.42,
+                      delay: reduced ? 0 : Math.min(visibleAnnouncements.length * 0.045, 0.28),
+                      ease: [0.22, 1, 0.36, 1],
+                      layout: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
+                    }}
+                    className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-6 py-12 text-center"
+                  >
+                    <div className="relative flex h-12 w-12 items-center justify-center">
+                      <motion.div
+                        className="absolute inset-0 rounded-full border-2 border-transparent"
+                        style={{ borderTopColor: 'rgba(167,139,250,0.8)', borderRightColor: 'rgba(167,139,250,0.28)' }}
+                        animate={reduced ? undefined : { rotate: 360 }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+                      />
+                      <motion.div
+                        className="absolute inset-2 rounded-full border border-transparent"
+                        style={{ borderTopColor: 'rgba(251,146,60,0.58)' }}
+                        animate={reduced ? undefined : { rotate: -360 }}
+                        transition={{ duration: 2.6, repeat: Infinity, ease: 'linear' }}
+                      />
+                      <motion.span
+                        className="h-1.5 w-1.5 rounded-full bg-brand-soft"
+                        animate={reduced ? undefined : { opacity: [1, 0.35, 1], scale: [1, 1.16, 1] }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </div>
+                    <div>
+                      <p className="font-display text-[15px] font-semibold text-white/70">Подбираем новых исполнителей</p>
+                      <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-white/25">Анкеты добавляются постепенно</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           )}
         </motion.section>
 

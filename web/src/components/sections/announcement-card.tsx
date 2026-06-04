@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { GithubLogo, Globe, TelegramLogo, ArrowRight } from '@phosphor-icons/react'
 import type { Announcement } from '@/data/announcements'
+import { cn } from '@/lib/utils'
 
 const CATEGORY_LABEL: Record<Announcement['category'], string> = {
   fullstack: 'Full-stack',
@@ -14,7 +15,7 @@ const CATEGORY_LABEL: Record<Announcement['category'], string> = {
   analytics: 'Analytics',
 }
 
-export function AnnouncementCard({ item, featured }: { item: Announcement; featured?: boolean }) {
+export function AnnouncementCard({ item }: { item: Announcement; featured?: boolean }) {
   const reduced = useReducedMotion()
   const cardRef = useRef<HTMLDivElement>(null)   // трансформируемый — только для style.transform
   const wrapRef = useRef<HTMLDivElement>(null)    // нетрансформируемая обёртка — для rect
@@ -40,25 +41,18 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
   const hsl = `hsl(${item.hue}, 72%, 58%)`
   const hslDim = `hsl(${item.hue}, 55%, 25%)`
   const hslDeep = `hsl(${item.hue}, 60%, 15%)`
+  const hslSoft = `hsla(${item.hue}, 72%, 58%, 0.45)`
+  const hslFaint = `hsla(${item.hue}, 72%, 58%, 0.18)`
 
-  // Единый RAF: анимированная граница + 3D lerp
+  // Единый RAF только во время hover: 3D lerp + spotlight без постоянной нагрузки на список
   useEffect(() => {
-    if (reduced || !finePointer) return
-    const border = borderRef.current
+    if (reduced || !finePointer || !hovered) return
     const card = cardRef.current
     const spot = spotRef.current
-    if (!border || !card) return
-    let angle = 0
-    const LERP = 0.12
+    if (!card) return
+    const LERP = 0.14
 
     const tick = () => {
-      // border
-      angle = (angle + (hovered ? 2.5 : 0.4)) % 360
-      border.style.background = hovered
-        ? `conic-gradient(from ${angle}deg, ${hsl} 0%, #A78BFA 15%, #FB923C 30%, ${hsl} 45%, rgba(8,4,18,0.9) 52%, rgba(8,4,18,0.9) 75%, ${hsl} 100%)`
-        : `conic-gradient(from ${angle}deg, ${hsl}70 0%, ${hsl}30 22%, rgba(8,4,18,0.95) 40%, rgba(8,4,18,0.95) 72%, ${hsl}70 100%)`
-
-      // 3D lerp — плавное приближение к цели
       cur.current.rx += (tgt.current.rx - cur.current.rx) * LERP
       cur.current.ry += (tgt.current.ry - cur.current.ry) * LERP
       cur.current.sx += (tgt.current.sx - cur.current.sx) * LERP
@@ -68,7 +62,7 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
 
       if (spot) {
         spot.style.background = `radial-gradient(circle 160px at ${cur.current.sx.toFixed(1)}% ${cur.current.sy.toFixed(1)}%, ${hsl}18 0%, transparent 70%)`
-        spot.style.opacity = hovered ? '1' : '0'
+        spot.style.opacity = '1'
       }
 
       rafRef.current = requestAnimationFrame(tick)
@@ -102,6 +96,12 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
     tgt.current.ry = 0
     tgt.current.sx = 50
     tgt.current.sy = 50
+    cur.current.rx = 0
+    cur.current.ry = 0
+    cur.current.sx = 50
+    cur.current.sy = 50
+    if (cardRef.current) cardRef.current.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)'
+    if (spotRef.current) spotRef.current.style.opacity = '0'
     rectRef.current = null
   }, [])
 
@@ -109,10 +109,6 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
 
   return (
     <motion.div
-      initial={reduced ? undefined : { opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="flex h-full flex-col"
       style={{ perspective: 1000 }}
     >
@@ -124,13 +120,21 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
         onMouseLeave={onLeave}
         animate={reduced || !finePointer ? undefined : {
           boxShadow: hovered
-            ? [`0 0 50px ${hsl}50`, `0 0 80px ${hsl}75`, `0 0 50px ${hsl}50`]
-            : [`0 0 10px ${hsl}10`, `0 0 24px ${hsl}22`, `0 0 10px ${hsl}10`],
+            ? [`0 0 42px ${hsl}45`, `0 0 68px ${hsl}60`, `0 0 42px ${hsl}45`]
+            : `0 0 22px ${hsl}16`,
         }}
-        transition={{ duration: hovered ? 0.9 : 3.5, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: hovered ? 0.75 : 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Animated border */}
-        <div ref={borderRef} className="relative flex h-full flex-col rounded-2xl p-[1.5px]">
+        <div
+          ref={borderRef}
+          className={cn('announcement-card-border relative flex h-full flex-col rounded-2xl p-[1.5px]', hovered && 'is-hovered')}
+          style={{
+            ['--card-hsl' as string]: hsl,
+            ['--card-hsl-soft' as string]: hslSoft,
+            ['--card-hsl-faint' as string]: hslFaint,
+          }}
+        >
           <div
             ref={cardRef}
             className="relative flex h-full flex-col overflow-hidden rounded-[13px]"

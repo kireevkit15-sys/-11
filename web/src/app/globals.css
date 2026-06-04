@@ -608,6 +608,46 @@
   will-change: opacity, transform;
 }
 
+/* Announcement cards: smooth CSS-driven border rotation without per-card RAF */
+@property --announcement-card-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes announcement-card-border-spin {
+  to { --announcement-card-angle: 360deg; }
+}
+.announcement-card-border {
+  background: conic-gradient(
+    from var(--announcement-card-angle),
+    var(--card-hsl-soft) 0%,
+    var(--card-hsl-faint) 22%,
+    rgba(8, 4, 18, 0.95) 40%,
+    rgba(8, 4, 18, 0.95) 72%,
+    var(--card-hsl-soft) 100%
+  );
+  animation: announcement-card-border-spin 8s linear infinite;
+  transform: translateZ(0);
+}
+.announcement-card-border.is-hovered {
+  background: conic-gradient(
+    from var(--announcement-card-angle),
+    var(--card-hsl) 0%,
+    #A78BFA 15%,
+    #FB923C 30%,
+    var(--card-hsl) 45%,
+    rgba(8, 4, 18, 0.9) 52%,
+    rgba(8, 4, 18, 0.9) 75%,
+    var(--card-hsl) 100%
+  );
+  animation-duration: 3.6s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .announcement-card-border {
+    animation: none !important;
+  }
+}
+
 /* ───────── НЕОН keyframes для секции «Шесть принципов» ───────── */
 
 /* Пульсирующая аура карточки: glow дышит */
