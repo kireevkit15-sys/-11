@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import type { ReactElement } from 'react'
-import Image from 'next/image'
 import { motion, useReducedMotion, useInView } from 'motion/react'
 import { Play, ArrowUpRight } from '@phosphor-icons/react'
 
@@ -141,6 +140,21 @@ const iconColors: Record<string, { main: string; bg: string; glow: string }> = {
   tg: { main: '#26C4F0', bg: 'rgba(38,196,240,0.15)', glow: 'rgba(38,196,240,0.4)' },
   youtube: { main: '#EF4444', bg: 'rgba(239,68,68,0.15)', glow: 'rgba(239,68,68,0.4)' },
   rutube: { main: '#3B82F6', bg: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)' },
+}
+
+function getYouTubeThumbnailCandidates(videoId: string): string[] {
+  return [
+    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+    `https://img.youtube.com/vi/${videoId}/default.jpg`,
+    `https://img.youtube.com/vi/${videoId}/sddefault.jpg`,
+    `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+  ]
+}
+
+function getVideoThumbnailCandidates(video: VideoItem): string[] {
+  if (video.channel === 'youtube') return getYouTubeThumbnailCandidates(video.videoId)
+  return [video.cover]
 }
 
 // ============================================================================
@@ -493,8 +507,10 @@ function VideoThumbnailFallback({ video }: { video: VideoItem }) {
 
 function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number; onPlay: (v: VideoItem) => void }) {
   const reduced = useReducedMotion()
-  const [coverSrc, setCoverSrc] = useState(video.cover)
-  const [coverFailed, setCoverFailed] = useState(false)
+  const thumbnailCandidates = getVideoThumbnailCandidates(video)
+  const [coverIndex, setCoverIndex] = useState(0)
+  const coverSrc = thumbnailCandidates[coverIndex] ?? video.cover
+  const coverFailed = coverIndex >= thumbnailCandidates.length
   const wrapRef = useRef<HTMLDivElement>(null)
   const spotlightRef = useRef<HTMLDivElement>(null)
   const borderRef = useRef<HTMLDivElement>(null)
@@ -607,12 +623,15 @@ function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number
                   alt={video.coverAlt}
                   className="absolute inset-0 h-full w-full object-cover"
                   style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.6s ease' }}
-                  onError={() => {
-                    if (coverSrc.includes('/maxresdefault.jpg')) {
-                      setCoverSrc(coverSrc.replace('/maxresdefault.jpg', '/hqdefault.jpg'))
-                      return
+                  loading="lazy"
+                  onError={() => setCoverIndex((current) => current + 1)}
+                  onLoad={(event) => {
+                    const isHighTier = coverSrc.includes('/maxresdefault.jpg') || coverSrc.includes('/sddefault.jpg')
+                    const img = event.currentTarget
+
+                    if (isHighTier && (img.naturalWidth <= 120 || img.naturalHeight <= 90)) {
+                      setCoverIndex((current) => current + 1)
                     }
-                    setCoverFailed(true)
                   }}
                 />
               )}
