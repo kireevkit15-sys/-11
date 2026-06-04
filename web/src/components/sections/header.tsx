@@ -210,9 +210,9 @@ export function Header() {
                               </div>
                               <div className="mt-3 flex items-center justify-between border-t border-white/[0.10] pt-3">
                                 <span className="font-mono text-[10px] text-white/35">4 системы налогообложения</span>
-                                <a href="/#services" onClick={() => setOpenMenu(null)} className="group flex items-center gap-1.5 rounded-full bg-brand-soft/10 px-3 py-1.5 font-mono text-[11px] font-semibold text-brand-soft transition hover:bg-brand-soft/20 hover:text-white">
+                                <Link href="/#services" onClick={() => setOpenMenu(null)} className="group flex items-center gap-1.5 rounded-full bg-brand-soft/10 px-3 py-1.5 font-mono text-[11px] font-semibold text-brand-soft transition hover:bg-brand-soft/20 hover:text-white">
                                   Все тарифы <ArrowRight weight="bold" className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                                </a>
+                                </Link>
                               </div>
                             </>
                           )}

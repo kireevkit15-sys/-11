@@ -511,6 +511,69 @@
 
 
 
+/* Hero/decor responsive performance */
+.hero-figure-halo {
+  filter: blur(50px);
+}
+
+.hero-figure-img {
+  filter: drop-shadow(0 40px 60px rgba(76, 29, 149, 0.45)) drop-shadow(0 16px 28px rgba(15, 11, 30, 0.35));
+}
+
+.footer-robot-hand {
+  top: 42%;
+  bottom: auto;
+  right: -30%;
+  width: min(125%, 520px);
+  height: 360px;
+  transform: translateY(-42%);
+}
+
+@media (min-width: 768px) {
+  .footer-robot-hand {
+    top: -12%;
+    bottom: -12%;
+    right: -6%;
+    width: min(72%, 940px);
+    height: auto;
+    transform: translateX(-40%);
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .hero-figure-halo {
+    filter: blur(28px);
+  }
+
+  .hero-figure-img {
+    filter: drop-shadow(0 22px 34px rgba(76, 29, 149, 0.34)) drop-shadow(0 8px 18px rgba(15, 11, 30, 0.28));
+  }
+
+  .blob {
+    animation: none !important;
+    filter: blur(56px) !important;
+  }
+
+  .star-particle,
+  .floating-particle,
+  .falling-star,
+  .holo-glow-2s,
+  .holo-pulse-2s {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-figure-idle,
+  .holo-glow-2s,
+  .holo-pulse-2s,
+  .star-particle,
+  .floating-particle,
+  .falling-star {
+    animation: none !important;
+  }
+}
+
 /* ───────── HOLO-RIBBON для FAQ — пульс 2 секунды ───────── */
 
 /* Glow-ореол вокруг 3D-ленты: дышит scale + opacity */

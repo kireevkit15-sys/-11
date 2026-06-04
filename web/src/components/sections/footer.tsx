@@ -15,7 +15,7 @@ import {
   ArrowRight,
 } from '@phosphor-icons/react'
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { AnimatePresence } from 'motion/react'
 
 import { Button } from '@/components/ui/button'
@@ -56,6 +56,43 @@ const socials: { name: string; href: string; Icon: PhosphorIcon }[] = [
 
 export function Footer() {
   const [modalOpen, setModalOpen] = useState(false)
+  const [checklistEmail, setChecklistEmail] = useState('')
+  const [checklistSubmitting, setChecklistSubmitting] = useState(false)
+  const [checklistSent, setChecklistSent] = useState(false)
+  const [checklistError, setChecklistError] = useState('')
+
+  const handleChecklistSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const email = checklistEmail.trim()
+    if (!email || checklistSubmitting) return
+
+    setChecklistSubmitting(true)
+    setChecklistError('')
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Получатель чек-листа',
+          contact: email,
+          source: 'footer_checklist',
+          page: window.location.pathname,
+          utm: {
+            lead_type: 'guide_checklist',
+            guide: 'fsi_checklist_deadlines_2026',
+          },
+        }),
+      })
+
+      if (!res.ok) throw new Error('checklist-submit-failed')
+      setChecklistSent(true)
+    } catch {
+      setChecklistError('Не удалось отправить email. Попробуйте ещё раз или напишите нам в Telegram.')
+    } finally {
+      setChecklistSubmitting(false)
+    }
+  }
+
   return (
     <>
     <footer>
@@ -77,14 +114,7 @@ export function Footer() {
 
           {/* ── Рука робота: тянется указательным пальцем к "Записаться сейчас" ── */}
           <div
-            className="absolute hidden md:block"
-            style={{
-              top: '-12%',
-              bottom: '-12%',
-              right: '-6%',
-              width: 'min(72%, 940px)',
-              transform: 'translateX(-40%)',
-            }}
+            className="footer-robot-hand absolute block opacity-25 md:opacity-100"
           >
             <Image
               src="/cta/robot-hand.webp"
@@ -186,21 +216,40 @@ export function Footer() {
               </p>
               <form
                 className="mt-5 flex flex-col gap-3"
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={handleChecklistSubmit}
               >
                 <Input
                   type="email"
+                  required
+                  value={checklistEmail}
+                  onChange={(e) => {
+                    setChecklistEmail(e.target.value)
+                    setChecklistSent(false)
+                    setChecklistError('')
+                  }}
                   placeholder="email@company.com"
                   aria-label="Ваш email"
                   className="h-11 border-white/15 bg-white/[0.06] text-white placeholder:text-white/40 focus-visible:border-brand-soft"
                 />
                 <Button
                   type="submit"
-                  className="group h-11 bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+                  disabled={checklistSubmitting}
+                  aria-busy={checklistSubmitting}
+                  className="group h-11 bg-primary font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
                 >
-                  Скачать чек-лист
+                  {checklistSubmitting ? 'Отправляем...' : checklistSent ? 'Чек-лист отправлен' : 'Скачать чек-лист'}
                   <PaperPlaneTilt weight="duotone" className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </Button>
+                {checklistSent && (
+                  <p className="rounded-xl border border-brand-soft/25 bg-brand-soft/10 px-3 py-2 text-xs leading-relaxed text-brand-soft" role="status">
+                    Email принят. Мы отправим чек-лист и увидим заявку в Telegram-боте.
+                  </p>
+                )}
+                {checklistError && (
+                  <p className="rounded-xl border border-brand-accent/25 bg-brand-accent/10 px-3 py-2 text-xs leading-relaxed text-brand-accent" role="alert">
+                    {checklistError}
+                  </p>
+                )}
               </form>
             </div>
 

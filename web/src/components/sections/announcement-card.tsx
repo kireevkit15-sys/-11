@@ -23,6 +23,15 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
   const rectRef = useRef<DOMRect | null>(null)
   const rafRef = useRef<number>(0)
   const [hovered, setHovered] = useState(false)
+  const [finePointer, setFinePointer] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: fine)')
+    const update = () => setFinePointer(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
 
   // Текущие и целевые значения для lerp — только refs, никакого state
   const cur = useRef({ rx: 0, ry: 0, sx: 50, sy: 50 })
@@ -34,7 +43,7 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
 
   // Единый RAF: анимированная граница + 3D lerp
   useEffect(() => {
-    if (reduced) return
+    if (reduced || !finePointer) return
     const border = borderRef.current
     const card = cardRef.current
     const spot = spotRef.current
@@ -66,15 +75,16 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [hovered, reduced, hsl])
+  }, [hovered, reduced, hsl, finePointer])
 
   const onEnter = useCallback(() => {
+    if (!finePointer) return
     if (cardRef.current) rectRef.current = cardRef.current.getBoundingClientRect()
     setHovered(true)
-  }, [])
+  }, [finePointer])
 
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (reduced) return
+    if (reduced || !finePointer) return
     // Берём rect с нетрансформируемой обёртки — без feedback loop
     const r = wrapRef.current?.getBoundingClientRect()
     if (!r) return
@@ -84,7 +94,7 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
     tgt.current.ry = x * 6
     tgt.current.sx = (x + 0.5) * 100
     tgt.current.sy = (y + 0.5) * 100
-  }, [reduced])
+  }, [reduced, finePointer])
 
   const onLeave = useCallback(() => {
     setHovered(false)
@@ -112,7 +122,7 @@ export function AnnouncementCard({ item, featured }: { item: Announcement; featu
         onMouseMove={onMove}
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
-        animate={reduced ? undefined : {
+        animate={reduced || !finePointer ? undefined : {
           boxShadow: hovered
             ? [`0 0 50px ${hsl}50`, `0 0 80px ${hsl}75`, `0 0 50px ${hsl}50`]
             : [`0 0 10px ${hsl}10`, `0 0 24px ${hsl}22`, `0 0 10px ${hsl}10`],

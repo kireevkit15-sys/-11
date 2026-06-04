@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react'
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 
 type HeroFigureProps = {
   className?: string
@@ -26,6 +26,15 @@ type HeroFigureProps = {
 export function HeroFigure({ className, pointerTarget }: HeroFigureProps) {
   const reduced = useReducedMotion()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const [finePointer, setFinePointer] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: fine)')
+    const update = () => setFinePointer(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
 
   const px = useMotionValue(0)
   const py = useMotionValue(0)
@@ -40,7 +49,7 @@ export function HeroFigure({ className, pointerTarget }: HeroFigureProps) {
   const scale   = useTransform(sy, [-1, 1], [1.03, 0.97])
 
   useEffect(() => {
-    if (reduced) return
+    if (reduced || !finePointer) return
     if (!pointerTarget?.current) return
     const target = pointerTarget.current
 
@@ -57,7 +66,7 @@ export function HeroFigure({ className, pointerTarget }: HeroFigureProps) {
       target.removeEventListener('pointermove', onMove)
       target.removeEventListener('pointerleave', onLeave)
     }
-  }, [pointerTarget, reduced, px, py])
+  }, [pointerTarget, reduced, finePointer, px, py])
 
   return (
     <div
@@ -71,10 +80,9 @@ export function HeroFigure({ className, pointerTarget }: HeroFigureProps) {
         aria-hidden
         animate={reduced ? undefined : { opacity: [0.85, 1, 0.85] }}
         transition={{ duration: 5.5, ease: 'easeInOut', repeat: Infinity, repeatType: 'loop' }}
-        className="pointer-events-none absolute inset-0 -z-10"
+        className="hero-figure-halo pointer-events-none absolute inset-0 -z-10"
         style={{
           background: 'radial-gradient(circle at 50% 55%, rgba(251, 146, 60, 0.36) 0%, rgba(167, 139, 250, 0.30) 35%, transparent 65%)',
-          filter: 'blur(50px)',
         }}
       />
 
@@ -101,10 +109,7 @@ export function HeroFigure({ className, pointerTarget }: HeroFigureProps) {
               draggable={false}
               decoding="async"
               fetchPriority="high"
-              className="h-full w-full object-contain select-none"
-              style={{
-                filter: 'drop-shadow(0 40px 60px rgba(76, 29, 149, 0.45)) drop-shadow(0 16px 28px rgba(15, 11, 30, 0.35))',
-              }}
+              className="hero-figure-img h-full w-full object-contain select-none"
             />
           </picture>
         </div>

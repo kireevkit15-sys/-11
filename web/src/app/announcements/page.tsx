@@ -256,7 +256,7 @@ function HudTerminal() {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="px-5 py-4" style={{ flexShrink: 0 }}>
             <div className="mb-3 flex items-center gap-1.5">
-              <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-brand-soft/50">// Найден профиль</span>
+              <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-brand-soft/50">Найден профиль</span>
               <div className="flex-1 h-px bg-brand-soft/10" />
             </div>
             {/* Avatar + name */}
@@ -308,11 +308,13 @@ function HudTerminal() {
 
 // RAF-анимация неонового ореола вокруг робота
 function RobotNeonRing() {
+  const reduced = useReducedMotion()
   const ringRef = useRef<HTMLDivElement>(null)
   const angleRef = useRef(0)
   const rafRef = useRef<number>(0)
 
   useEffect(() => {
+    if (reduced) return
     const el = ringRef.current
     if (!el) return
     const tick = () => {
@@ -323,7 +325,7 @@ function RobotNeonRing() {
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [])
+  }, [reduced])
 
   return (
     <div
@@ -341,6 +343,7 @@ function RobotNeonRing() {
 }
 
 export default function AnnouncementsPage() {
+  const reduced = useReducedMotion()
   const [activeCategory, setActiveCategory] = useState<Announcement['category'] | 'all'>('all')
 
   const filtered = useMemo(() => {
@@ -367,6 +370,30 @@ export default function AnnouncementsPage() {
         <div className="absolute -left-40 top-20 h-[600px] w-[600px] rounded-full bg-violet-600/20 blur-[120px]" />
         <div className="absolute -right-40 top-40 h-[500px] w-[500px] rounded-full bg-[#FB923C]/12 blur-[120px]" />
         <div className="absolute left-1/2 top-1/3 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-blue-600/10 blur-[100px]" />
+      </div>
+
+      {/* Robot — абсолютный, левая половина, от шапки */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-8 block h-[360px] w-full overflow-hidden lg:hidden"
+        style={{ zIndex: 1 }}
+      >
+        <div
+          className="absolute left-1/2 top-0 h-[320px] w-[320px] -translate-x-1/2 rounded-full bg-brand-soft/20 blur-3xl"
+        />
+        <motion.img
+          src="/announcements/robot.png"
+          alt=""
+          className="absolute left-1/2 top-0 h-[330px] w-[330px] -translate-x-1/2 select-none object-contain opacity-65"
+          style={{
+            mixBlendMode: 'screen',
+            filter: 'drop-shadow(0 0 36px rgba(167,139,250,0.45)) brightness(1.08)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 64%, transparent 96%)',
+            maskImage: 'linear-gradient(to bottom, black 0%, black 64%, transparent 96%)',
+          }}
+          animate={reduced ? undefined : { y: [0, -8, 0] }}
+          transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
       </div>
 
       {/* Robot — абсолютный, левая половина, от шапки */}

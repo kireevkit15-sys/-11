@@ -332,7 +332,7 @@ function MemberCard({
   const rafId = useRef<number>(0)
   const isHovered = useRef(false)
 
-  const animateTilt = useCallback(() => {
+  function animateTilt() {
     const el = tiltRef.current
     if (!el) return
     const t = targetTilt.current
@@ -346,7 +346,7 @@ function MemberCard({
       c.x = 0; c.y = 0
       el.style.transform = ''
     }
-  }, [])
+  }
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -362,7 +362,7 @@ function MemberCard({
         rafId.current = requestAnimationFrame(animateTilt)
       }
     },
-    [reduced, isOpen, animateTilt],
+    [reduced, isOpen],
   )
 
   const handleMouseLeave = useCallback(() => {
@@ -371,7 +371,7 @@ function MemberCard({
     targetTilt.current.y = 0
     cancelAnimationFrame(rafId.current)
     rafId.current = requestAnimationFrame(animateTilt)
-  }, [animateTilt])
+  }, [])
 
   // «Луч на герое»: затемняем все карточки группы, кроме активной
   const dimAnimate = reduced

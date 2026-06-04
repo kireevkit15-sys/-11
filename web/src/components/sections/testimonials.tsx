@@ -131,23 +131,15 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
   }, [])
 
   return (
-    <motion.div
-      animate={reduced ? undefined : {
-        boxShadow: isActive
-          ? ['0 0 30px rgba(124,58,237,0.4)', '0 0 55px rgba(124,58,237,0.65)', '0 0 30px rgba(124,58,237,0.4)']
-          : ['0 0 8px rgba(124,58,237,0.08)', '0 0 16px rgba(124,58,237,0.15)', '0 0 8px rgba(124,58,237,0.08)'],
-      }}
-      transition={{ duration: isActive ? 1.5 : 3, repeat: Infinity, ease: 'easeInOut' }}
-      className="rounded-2xl"
-    >
+    <div className="h-full rounded-2xl">
       {/* Бегущая рамка */}
-      <div ref={borderRef} className="rounded-2xl p-[2px]">
+      <div ref={borderRef} className="h-full overflow-hidden rounded-2xl p-[2px]">
         <div
           ref={cardRef}
           onMouseMove={onMove}
           onMouseLeave={onLeave}
           className={cn(
-            'relative flex h-full flex-col overflow-hidden rounded-[14px] p-6 transition-all duration-500',
+            'relative flex h-full flex-col overflow-hidden rounded-[14px] p-5 transition-all duration-500 sm:p-6',
             isActive
               ? 'bg-[rgba(124,58,237,0.12)]'
               : 'bg-[rgba(15,11,30,0.85)]',
@@ -157,6 +149,18 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
             WebkitBackdropFilter: 'blur(20px)',
           }}
         >
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[14px]"
+            animate={reduced ? undefined : { opacity: isActive ? [0.45, 0.75, 0.45] : [0.12, 0.22, 0.12] }}
+            transition={{ duration: isActive ? 1.8 : 3.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              background: isActive
+                ? 'radial-gradient(circle at 50% 0%, rgba(167,139,250,0.34), transparent 42%), radial-gradient(circle at 100% 100%, rgba(251,146,60,0.22), transparent 38%)'
+                : 'radial-gradient(circle at 50% 0%, rgba(167,139,250,0.16), transparent 44%)',
+            }}
+          />
+
           {/* Spotlight */}
           <div
             ref={spotRef}
@@ -200,7 +204,7 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
 
           {/* Text */}
           <p className={cn(
-            'relative z-10 flex-1 text-sm leading-relaxed transition-colors duration-500',
+            'relative z-10 min-h-0 flex-1 overflow-hidden text-sm leading-relaxed transition-colors duration-500 [mask-image:linear-gradient(to_bottom,#000_82%,transparent_100%)]',
             isActive ? 'text-white/90' : 'text-white/55',
           )}>
             {t.text}
@@ -256,7 +260,7 @@ function TestimonialCard({ t, isActive }: { t: Testimonial; isActive: boolean })
           />
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
@@ -367,6 +371,7 @@ export function TestimonialsSection() {
           {testimonials.map((t, i) => (
             <div
               key={t.name}
+              className="h-[430px] sm:h-[410px]"
               style={{ width: 'min(380px, calc(100vw - 32px))', minWidth: 'min(380px, calc(100vw - 32px))', scrollSnapAlign: 'start' }}
               onClick={() => { pauseAuto(); scrollTo(i) }}
             >

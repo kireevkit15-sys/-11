@@ -1,6 +1,7 @@
 'use client'
 
-import { motion, useReducedMotion } from 'motion/react'
+import { useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   Rocket,
   Buildings,
@@ -14,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
+import { ConsultModal } from '@/components/sections/consult-modal'
 
 // ---------------------------------------------------------------------------
 // Types & data — состав работ дословно с сайта-референса (accounting-diva3d.ru,
@@ -102,8 +104,10 @@ const fsiItems: string[] = [
 // ---------------------------------------------------------------------------
 export function ServicesSection() {
   const reduced = !!useReducedMotion()
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
+    <>
     <section
       id="services"
       className="relative isolate overflow-hidden bg-aurora-dark text-white noise-overlay"
@@ -170,20 +174,34 @@ export function ServicesSection() {
         {/* ────────── Grid: 3 normal cards + 1 hero (FSI) ────────── */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-12">
           {services.map((s, i) => (
-            <NormalCard key={s.title} service={s} index={i} reduced={reduced} />
+            <NormalCard key={s.title} service={s} index={i} reduced={reduced} onOpenConsult={() => setModalOpen(true)} />
           ))}
 
-          <FsiCard reduced={reduced} />
+          <FsiCard reduced={reduced} onOpenConsult={() => setModalOpen(true)} />
         </div>
       </div>
     </section>
+      <AnimatePresence>
+        {modalOpen && <ConsultModal onClose={() => setModalOpen(false)} />}
+      </AnimatePresence>
+    </>
   )
 }
 
 // ---------------------------------------------------------------------------
 // Normal card — accepts reduced motion as prop (avoids per-card hook call)
 // ---------------------------------------------------------------------------
-function NormalCard({ service, index, reduced }: { service: Service; index: number; reduced: boolean }) {
+function NormalCard({
+  service,
+  index,
+  reduced,
+  onOpenConsult,
+}: {
+  service: Service
+  index: number
+  reduced: boolean
+  onOpenConsult: () => void
+}) {
   const Icon = service.icon
 
   return (
@@ -268,16 +286,17 @@ function NormalCard({ service, index, reduced }: { service: Service; index: numb
 
         {/* ── FOOTER CTA ────────────────────────────── */}
         <div className="relative z-10 shrink-0 border-t border-white/10 px-5 py-4 sm:px-7">
-          <a
-            href="#contact"
-            className="group/link inline-flex items-center gap-1.5 font-mono text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:text-brand-soft"
+          <button
+            type="button"
+            onClick={onOpenConsult}
+            className="group/link inline-flex items-center gap-1.5 font-mono text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:text-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-soft/60 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-ink"
           >
             Подробнее о тарифе
             <ArrowUpRight
               weight="duotone"
               className="h-3.5 w-3.5 transition-transform group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5"
             />
-          </a>
+          </button>
         </div>
       </div>
     </motion.article>
@@ -287,7 +306,7 @@ function NormalCard({ service, index, reduced }: { service: Service; index: numb
 // ---------------------------------------------------------------------------
 // FSI hero card — accepts reduced motion as prop
 // ---------------------------------------------------------------------------
-function FsiCard({ reduced }: { reduced: boolean }) {
+function FsiCard({ reduced, onOpenConsult }: { reduced: boolean; onOpenConsult: () => void }) {
 
   return (
     <motion.article
@@ -363,6 +382,7 @@ function FsiCard({ reduced }: { reduced: boolean }) {
 
             <Button
               size="lg"
+              onClick={onOpenConsult}
               className="group/btn h-12 w-full bg-brand-accent px-7 text-[15px] font-semibold text-brand-accent-foreground shadow-xl shadow-brand-accent/30 hover:bg-brand-accent/90 sm:w-auto lg:w-full"
             >
               Заказать сопровождение
