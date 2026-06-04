@@ -8,11 +8,6 @@ import { cn } from '@/lib/utils'
 
 const CATEGORY_LABEL: Record<Announcement['category'], string> = {
   fullstack: 'Full-stack',
-  frontend: 'Frontend',
-  backend: 'Backend',
-  design: 'Design',
-  ai: 'AI / ML',
-  analytics: 'Analytics',
 }
 
 export function AnnouncementCard({ item }: { item: Announcement; featured?: boolean }) {
