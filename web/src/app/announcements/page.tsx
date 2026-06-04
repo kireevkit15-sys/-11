@@ -502,7 +502,7 @@ export default function AnnouncementsPage() {
                             <div className="flex items-center gap-2">
                 <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
                   animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
-                <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{filtered.length} специалистов · обновлено сегодня</span>
+                <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>1 команда · обновлено сегодня</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {categories.map((cat) => (
