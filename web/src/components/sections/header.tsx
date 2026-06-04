@@ -104,7 +104,7 @@ export function Header() {
         className="pointer-events-none sticky top-0 z-50 flex justify-center px-0 pt-3 sm:px-4 sm:pt-4"
       >
         <div
-          className="pointer-events-auto relative mx-auto grid w-[calc(100vw-24px)] max-w-[920px] grid-cols-[auto_1fr_auto] items-center gap-2 rounded-[30px] px-3 py-2.5 sm:w-[min(calc(100vw-32px),920px)] sm:gap-4 sm:rounded-[36px] sm:px-5"
+          className="pointer-events-auto relative mx-auto grid w-[calc(100vw_-_24px)] max-w-[920px] grid-cols-[1fr_auto_1fr] items-center gap-0 rounded-[30px] px-3 py-2.5 sm:w-[min(calc(100vw_-_32px),920px)] sm:rounded-[36px] sm:px-5 lg:grid-cols-[auto_1fr_auto] lg:gap-4"
           style={{
             background: 'linear-gradient(165deg, rgba(48,36,86,0.55) 0%, rgba(22,16,42,0.72) 45%, rgba(8,5,18,0.88) 100%)',
             WebkitBackdropFilter: 'blur(32px) saturate(180%)',
@@ -119,8 +119,8 @@ export function Header() {
           }}
         >
           {/* Logo */}
-          <Link href="/" className="group flex items-center gap-3">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-brand-soft to-primary shadow-lg shadow-primary/30 ring-1 ring-white/30 transition group-hover:scale-105">
+          <Link href="/" className="group flex w-11 justify-self-start items-center justify-start gap-3 lg:w-auto">
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-brand-soft to-primary shadow-lg shadow-primary/30 ring-1 ring-white/30 transition group-hover:scale-105 sm:h-12 sm:w-12">
               <span aria-hidden className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent" />
               <span className="absolute inset-0 flex items-center justify-center font-serif-accent text-2xl font-extrabold italic text-white">Д</span>
               <motion.span
@@ -130,10 +130,15 @@ export function Header() {
                 transition={reduced ? undefined : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               />
             </div>
-            <div className="flex flex-col leading-none">
+            <div className="hidden flex-col leading-none lg:flex">
               <span className="font-display text-2xl font-extrabold tracking-[-0.04em] text-white">ДИВА</span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">бухгалтерия</span>
             </div>
+          </Link>
+
+          <Link href="/" className="flex min-w-0 flex-col items-center justify-self-center leading-none lg:hidden">
+            <span className="font-display text-xl font-extrabold tracking-[-0.04em] text-white">ДИВА</span>
+            <span className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-white/42">бухгалтерия</span>
           </Link>
 
           {/* Nav */}
@@ -265,7 +270,7 @@ export function Header() {
           </nav>
 
           {/* CTA */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-self-end gap-2">
             <button
               type="button"
               onClick={() => setModalOpen(true)}
