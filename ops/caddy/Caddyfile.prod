@@ -40,7 +40,8 @@
 }
 
 # -----------------------------------------------------------------------------
-# Admin → Strapi (cms container)
+# Admin → кастомная админ-панель diva-admin (Next.js)
+# Рекомендуется ограничить доступ по IP (раскомментируйте @denied ниже).
 # -----------------------------------------------------------------------------
 {$ADMIN_DOMAIN} {
 	encode gzip zstd
@@ -48,7 +49,7 @@
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "SAMEORIGIN"
+		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		-Server
@@ -60,13 +61,11 @@
 	}
 
 	# -------------------------------------------------------------------------
-	# Optional IP whitelist for the Strapi admin panel.
+	# Optional IP whitelist for the admin panel.
 	# Uncomment and list trusted office / VPN / home IPs (CIDR allowed).
-	# Keep `whitelist.example.txt` as a reference for the format.
 	# -------------------------------------------------------------------------
-	# @allowed remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
 	# @denied not remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
 	# respond @denied 403
 
-	reverse_proxy cms:1337
+	reverse_proxy diva-admin:3001
 }

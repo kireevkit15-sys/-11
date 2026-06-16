@@ -5,11 +5,10 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  ArrowRight, Buildings, CaretDown, EnvelopeSimple, Lightning,
+  ArrowRight, Buildings, CaretDown, Lightning,
   List, PhoneCall, Rocket, TelegramLogo, Trophy, Users, X,
   ChatCircleDots, Star, FileText,
 } from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ConsultModal } from '@/components/sections/consult-modal'
 

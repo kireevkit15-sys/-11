@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
+import { getCaseStudies, type CaseStudy } from '@/lib/cms'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Performance constants
@@ -26,18 +27,39 @@ type CaseItem = {
   metricLabel: string
 }
 
-const cases: CaseItem[] = [
-  { initials: 'NB', name: 'NeuroBio',   niche: 'Биотех',       did: 'Поставили учёт с нуля, сопроводили этап «Старт-1» ФСИ',          metric: '4 млн ₽',   metricLabel: 'грант защищён' },
-  { initials: 'CT', name: 'CodeTrek',   niche: 'EdTech',        did: 'Перевели с самозанятых на ИП+УСН, собрали зарплатный модуль',    metric: '−38%',      metricLabel: 'нагрузка на финдира' },
-  { initials: 'AG', name: 'AgroSense',  niche: 'AgTech',        did: 'Прошли камеральную проверку без единого замечания',              metric: '0 ₽',       metricLabel: 'доначислений' },
-  { initials: 'FT', name: 'FinTrust',   niche: 'Финтех',        did: 'Перевели на льготу IT-аккредитации, выстроили КУДиР',            metric: '−7,6%',     metricLabel: 'эффективная ставка' },
-  { initials: 'OM', name: 'Omedi.ai',   niche: 'MedTech',       did: 'Подняли отчётность за 2 года, закрыли долги по ФНС',             metric: '1,2 млн ₽', metricLabel: 'возврат НДС' },
-  { initials: 'RV', name: 'Roveris',    niche: 'Робототехника', did: 'Сопроводили «Развитие-НТИ» — отчёты, акты, целевое расходование', metric: '20 млн ₽', metricLabel: 'грант освоен' },
-  { initials: 'SM', name: 'Smartum',    niche: 'SaaS B2B',      did: 'Настроили валютный контроль и ВЭД для контрактов из ОАЭ',        metric: '6 стран',   metricLabel: 'выход на рынки' },
-  { initials: 'KV', name: 'Kvanta',     niche: 'Hardware',      did: 'Ввели управленку и P&L в разрезе продуктовых линеек',            metric: '×3',        metricLabel: 'скорость закрытия' },
-  { initials: 'LG', name: 'LingoUp',    niche: 'EdTech',        did: 'Зарегистрировали ИТ-компанию, оформили резидентство Сколково',   metric: '0%',        metricLabel: 'налог на прибыль' },
-  { initials: 'PX', name: 'PixelForge', niche: 'Gamedev',       did: 'Закрыли 3 года ОСН, перевели на УСН «доходы−расходы»',          metric: '2,8 млн ₽', metricLabel: 'экономия за год' },
-] as const
+// Fallback — используется если CMS недоступна
+// Кейсы отражают типичные результаты работы ДИВА: гранты ФСИ, бухгалтерия для стартапов
+const fallbackCases: CaseItem[] = [
+  { initials: 'НБ', name: 'NeuroBio',    niche: 'Биотех',           did: 'Поставили учёт с нуля, сопроводили этап «Старт-1» ФСИ',           metric: '4 млн ₽',  metricLabel: 'грант защищён' },
+  { initials: 'ИТ', name: 'ITStartup',  niche: 'IT-аккредитация',   did: 'Получили IT-аккредитацию, перевели на льготную ставку',           metric: '0%',        metricLabel: 'налог на прибыль' },
+  { initials: 'СТ', name: 'СтартапТомск', niche: 'ФСИ Старт',        did: 'Подготовили заявку на «Старт-1», прошли экспертизу с первого раза', metric: '8 млн ₽', metricLabel: 'грант получен' },
+  { initials: 'УС', name: 'УмнаяСистема', niche: 'УСН',             did: 'Оптимизировали налоговую нагрузку при переходе с ОСН на УСН',    metric: '-23%',      metricLabel: 'налоги снижены' },
+  { initials: 'ЭК', name: 'ЭкоТех',      niche: 'Экспорт',           did: 'Настроили валютный контроль для экспортных контрактов',          metric: '12 стран',  metricLabel: 'рынков СНГ и ЕАЭС' },
+  { initials: 'СК', name: 'СтудКвест',   niche: 'Студенческий стартап', did: 'Оформили документы для программы «Студенческий стартап» ФСИ',  metric: '500 тыс ₽', metricLabel: 'грант одобрен' },
+  { initials: 'МА', name: 'МедАналитика', niche: 'MedTech',          did: 'Закрыли 2 года бухгалтерии, подготовили отчётность для инвестора', metric: '2,4 млн ₽', metricLabel: 'возврат НДС' },
+  { initials: 'РТ', name: 'РоботоТех',    niche: 'Робототехника',    did: 'Сопроводили грант «Развитие-НТИ» от заявки до отчёта',         metric: '20 млн ₽',  metricLabel: 'грант освоен' },
+  { initials: 'БП', name: 'БизнесПлюс',  niche: 'ОСН',              did: 'Перевели на ОСН, настроили КУДиР и управленческую отчётность',   metric: 'x3',        metricLabel: 'скорость закрытия' },
+  { initials: 'АУ', name: 'АУСН-Старт',  niche: 'АУСН',             did: 'Первое сопровождение стартапа на АУСН - от регистрации до отчёта', metric: '100%',     metricLabel: 'без штрафов' },
+]
+
+// ─── Конвертация CMS CaseStudy → CaseItem ────────────────────────────────────
+// Берём первые 10 кейсов, генерируем initials из названия
+
+function getInitials(name: string): string {
+  return name.split(/\s+/).slice(0, 2).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+}
+
+// Strapi v5: данные приходят напрямую без .attributes
+function caseStudyToCaseItem(cs: CaseStudy): CaseItem {
+  return {
+    initials: getInitials(cs.title),
+    name:     cs.title,
+    niche:    cs.tags?.[0] || 'Стартап',
+    did:      cs.task || cs.solution || 'Решена задача клиента',
+    metric:   cs.result?.match(/^[\d\.\,×\-\s]+[^\s]{0,8}/)?.[0] || '—',
+    metricLabel: 'результат',
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3D-позиции карточек.
@@ -289,7 +311,7 @@ function FloatingCard({ item, placement, cardRef, index }: {
 // Scroll handler обновляет Z каждой карточки и прозрачность — 0 реакта.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CasesScene() {
+function CasesScene({ cases }: { cases: CaseItem[] }) {
   const runwayRef = useRef<HTMLDivElement>(null)
   const panelRef  = useRef<HTMLDivElement>(null)
   const sceneRef  = useRef<HTMLDivElement>(null)
@@ -338,7 +360,7 @@ function CasesScene() {
     if (y >= endY)                         passedEnd.current = true
     if (y < top - viewH) { passedEnd.current = false; reversing.current = false }
 
-    if (y < prevY.current && passedEnd.current && !reversing.current && y >= top && y < endY) {
+    if (y > prevY.current && passedEnd.current && !reversing.current && y >= top && y < endY) {
       reversing.current = true
       passedEnd.current = false
       smoothSkip(Math.max(0, top - viewH), 400)
@@ -556,7 +578,7 @@ function CasesScene() {
           >
             {cases.map((item, i) => (
               <FloatingCard
-                key={item.name}
+                key={item.name + i}
                 item={item}
                 placement={placements[i]!}
                 cardRef={el => { cardRefs.current[i] = el }}
@@ -673,6 +695,26 @@ function MarqueeRow({ items, direction, duration }: {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function CasesMarquee() {
+  const [cases, setCases] = useState<CaseItem[]>([])
+
+  // Загрузка данных из CMS
+  useEffect(() => {
+    getCaseStudies()
+      .then(studies => {
+        if (studies.length > 0) {
+          setCases(studies.map(caseStudyToCaseItem))
+        } else {
+          setCases(fallbackCases)
+        }
+      })
+      .catch(() => {
+        setCases(fallbackCases)
+      })
+  }, [])
+
+  // Не рендерим ничего пока данные не загрузились
+  if (cases.length === 0) return null
+
   const half = Math.ceil(cases.length / 2)
 
   return (
@@ -700,7 +742,7 @@ export function CasesMarquee() {
 
       {/* Desktop */}
       <div className="hidden lg:block">
-        <CasesScene />
+        <CasesScene cases={cases} />
       </div>
 
     </section>

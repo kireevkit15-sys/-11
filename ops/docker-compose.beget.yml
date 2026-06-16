@@ -32,7 +32,8 @@ services:
 
   web:
     build:
-      context: ../web
+      context: ..
+      dockerfile: web/Dockerfile
     container_name: diva-web
     depends_on:
       postgres:
@@ -41,7 +42,6 @@ services:
       NODE_ENV: production
       HOSTNAME: 0.0.0.0
       PORT: 3000
-      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-http://localhost:1337}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://web:3000/ >/dev/null || exit 1"]

@@ -3,7 +3,6 @@
 #
 # In normal local development you usually do NOT need Caddy at all:
 #   - browse Next.js directly at  http://localhost:3000
-#   - browse Strapi directly at   http://localhost:1337/admin
 #
 # Use this file only when you want to exercise a Caddy-fronted setup on your
 # laptop (e.g. to test header/redirect behaviour) before deploying to the VPS.

@@ -20,4 +20,4 @@ prod-up:
 	docker compose -f docker-compose.prod.yml --env-file .env up -d
 
 backup-db:
-	@echo "TODO: implement DB backup (phase F) — see ops/scripts/backup-db.sh"
+	./scripts/backup-db.sh

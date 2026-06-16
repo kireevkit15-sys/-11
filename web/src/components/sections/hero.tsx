@@ -1,16 +1,82 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { HeroFigure } from '@/components/motion/hero-figure'
 import { ConsultModal } from '@/components/sections/consult-modal'
+import { getHeroConfig } from '@/lib/cms'
+
+type HeroData = {
+  headline: string
+  subheadline: string
+  ctaText: string
+  badges: string[]
+  statNumber: string
+  statLabel: string
+}
+
+const FALLBACK_HERO: HeroData = {
+  headline: 'Завязли в отчётах?\nТогда *кто строит*\nкомпанию?',
+  subheadline:
+    'Возьмём бухгалтерию и отчётность по грантам ФСИ. Бесплатная консультация — 30 минут с экспертом. Без обязательств.',
+  ctaText: 'Записаться на консультацию',
+  badges: ['30 минут', 'без обязательств', 'ФСИ и налоги'],
+  statNumber: '94%',
+  statLabel: 'остаются',
+}
+
+/** Рендер заголовка: переносы строк + *слово* как акцент. */
+function renderHeadline(text: string) {
+  const lines = text.split('\n')
+  return lines.map((line, li) => {
+    const parts = line.split(/(\*[^*]+\*)/g).filter(Boolean)
+    return (
+      <Fragment key={li}>
+        {parts.map((part, pi) =>
+          part.startsWith('*') && part.endsWith('*') ? (
+            <span
+              key={pi}
+              className="font-serif-accent italic text-brand-soft"
+              style={{
+                textShadow:
+                  '0 0 30px rgba(167, 139, 250, 0.55), 0 0 60px rgba(124, 58, 237, 0.35)',
+              }}
+            >
+              {part.slice(1, -1)}
+            </span>
+          ) : (
+            <Fragment key={pi}>{part}</Fragment>
+          ),
+        )}
+        {li < lines.length - 1 && <br />}
+      </Fragment>
+    )
+  })
+}
 
 export function HeroSection() {
   const reduced = useReducedMotion()
   const ease = [0.22, 1, 0.36, 1] as const
-  const springEase = [0.16, 1, 0.3, 1] as const
   const [modalOpen, setModalOpen] = useState(false)
+  const [hero, setHero] = useState<HeroData>(FALLBACK_HERO)
+
+  useEffect(() => {
+    getHeroConfig()
+      .then((cfg) => {
+        if (cfg) {
+          setHero({
+            headline: cfg.headline || FALLBACK_HERO.headline,
+            subheadline: cfg.subheadline || FALLBACK_HERO.subheadline,
+            ctaText: cfg.ctaText || FALLBACK_HERO.ctaText,
+            badges: Array.isArray(cfg.badges) && cfg.badges.length ? cfg.badges : FALLBACK_HERO.badges,
+            statNumber: cfg.statNumber || FALLBACK_HERO.statNumber,
+            statLabel: cfg.statLabel || FALLBACK_HERO.statLabel,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <section className="relative isolate -mt-[80px] flex min-h-[100svh] items-center overflow-hidden bg-aurora-dark noise-overlay sm:-mt-[88px]">
@@ -71,20 +137,7 @@ export function HeroSection() {
               '0 2px 24px rgba(15, 11, 30, 0.65), 0 0 40px rgba(15, 11, 30, 0.4)',
           }}
         >
-          Завязли в отчётах?
-          <br />
-          Тогда{' '}
-          <span
-            className="font-serif-accent italic text-brand-soft"
-            style={{
-              textShadow:
-                '0 0 30px rgba(167, 139, 250, 0.55), 0 0 60px rgba(124, 58, 237, 0.35)',
-            }}
-          >
-            кто строит
-          </span>
-          <br />
-          компанию?
+          {renderHeadline(hero.headline)}
         </motion.h1>
 
         <motion.p
@@ -93,7 +146,7 @@ export function HeroSection() {
           transition={{ duration: 0.7, ease, delay: 0.15 }}
           className="glass-card-dark max-w-2xl rounded-2xl px-4 py-3 text-base leading-relaxed text-white/85 sm:px-5 sm:text-xl"
         >
-          Возьмём бухгалтерию и отчётность по грантам ФСИ. Бесплатная консультация — 30 минут с экспертом. Без обязательств.
+          {hero.subheadline}
         </motion.p>
 
         <motion.div
@@ -107,7 +160,7 @@ export function HeroSection() {
             onClick={() => setModalOpen(true)}
             className="h-12 w-full max-w-[320px] bg-primary px-7 text-[15px] font-semibold shadow-lg shadow-primary/40 transition hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/55 sm:w-auto"
           >
-            Записаться на консультацию
+            {hero.ctaText}
           </Button>
         </motion.div>
 
@@ -117,14 +170,14 @@ export function HeroSection() {
           transition={{ duration: 0.6, ease, delay: 0.35 }}
           className="flex flex-wrap items-center justify-center gap-2"
         >
-          {['30 минут', 'без обязательств', 'ФСИ и налоги'].map((item) => (
+          {hero.badges.map((item) => (
             <span key={item} className="glass-card-dark rounded-full px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
               {item}
             </span>
           ))}
           <span className="glass-card-dark flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-white/70">
-            <span className="font-mono font-semibold text-brand-soft">94%</span>
-            остаются
+            <span className="font-mono font-semibold text-brand-soft">{hero.statNumber}</span>
+            {hero.statLabel}
           </span>
         </motion.div>
       </div>

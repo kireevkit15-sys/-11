@@ -10,7 +10,6 @@ import {
   CheckCircle,
   ArrowRight,
   ArrowUpRight,
-  type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { ConsultModal } from '@/components/sections/consult-modal'
@@ -19,18 +18,36 @@ import { cn } from '@/lib/utils'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+export type IconName = 'Rocket' | 'Buildings' | 'Lightning' | 'Trophy'
+
 export type LocalService = {
   title: string
   price: string
   perUnit: string
-  icon: PhosphorIcon
+  icon: IconName
   items: string[]
   isFsi: boolean
 }
 
 type FsiService = LocalService & {
-  isFsi: true
   fsiPrice: string
+}
+
+// ---------------------------------------------------------------------------
+// Icon components (defined outside render to avoid ESLint warning)
+// ---------------------------------------------------------------------------
+const ServiceIcon = ({ name, className }: { name: IconName; className?: string }) => {
+  switch (name) {
+    case 'Rocket':
+      return <Rocket weight="duotone" className={className} />
+    case 'Buildings':
+      return <Buildings weight="duotone" className={className} />
+    case 'Trophy':
+      return <Trophy weight="duotone" className={className} />
+    case 'Lightning':
+    default:
+      return <Lightning weight="duotone" className={className} />
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -63,44 +80,8 @@ export function ServicesSectionClient({ normalServices, fsiService }: ServicesSe
 
   return (
     <>
-      <section
-        id="services"
-        className="relative isolate overflow-hidden bg-aurora-dark text-white noise-overlay"
-      >
-        {/* Тонкая точечная сетка */}
-        <div
-          className="pointer-events-none absolute inset-0 pattern-dot-grid-dark opacity-50"
-          aria-hidden
-        />
-
-        {/* Soft violet blob top-left */}
-        <div
-          className="blob blob-soft"
-          style={{
-            top: '5%',
-            left: '-5%',
-            width: '600px',
-            height: '600px',
-            opacity: 0.35,
-          }}
-          aria-hidden
-        />
-        {/* Coral blob bottom-right */}
-        <div
-          className="blob blob-coral"
-          style={{
-            bottom: '5%',
-            right: '-8%',
-            width: '550px',
-            height: '550px',
-            opacity: 0.22,
-          }}
-          aria-hidden
-        />
-
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-20 px-4 py-32 sm:px-6 sm:py-40">
-          {/* ────────── Grid: 3 normal cards + 1 hero (FSI) ────────── */}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-12">
+      {/* Grid: 3 normal cards + 1 hero (FSI) */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-12">
             {normalServices.map((s, i) => (
               <NormalCard
                 key={s.title}
@@ -119,8 +100,6 @@ export function ServicesSectionClient({ normalServices, fsiService }: ServicesSe
               onOpenConsult={() => setModalOpen(true)}
             />
           </div>
-        </div>
-      </section>
       <AnimatePresence>
         {modalOpen && <ConsultModal onClose={() => setModalOpen(false)} />}
       </AnimatePresence>
@@ -146,8 +125,6 @@ function NormalCard({
   onToggleExpand: () => void
   onOpenConsult: () => void
 }) {
-  const Icon = service.icon
-
   return (
     <motion.article
       initial={reduced ? false : { opacity: 0, y: 24 }}
@@ -178,7 +155,7 @@ function NormalCard({
           <div className="flex items-start justify-between gap-4">
             {/* Icon */}
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-brand-soft/10 text-brand-soft">
-              <Icon weight="duotone" className="h-5 w-5" />
+              <ServiceIcon name={service.icon} className="h-5 w-5" />
             </div>
             {/* Index */}
             <span className="font-mono text-[10px] font-medium tabular-nums-display tracking-[0.15em] text-white/40">

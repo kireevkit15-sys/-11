@@ -31,6 +31,16 @@ public/uploads/
 .env
 .env.*
 !.env.example
+ops/scripts/gen-env.local.sh
+
+# =============================================================================
+# Diva Admin secrets / debug scripts
+# =============================================================================
+diva-admin/.env
+diva-admin/.env.*
+!diva-admin/.env.example
+diva-admin/*.cjs
+diva-admin/*.mjs
 
 # =============================================================================
 # Python

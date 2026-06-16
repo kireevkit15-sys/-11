@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """Generate ops/.env for the ДИВА project on the server.
 Usage: python3 gen-env.py <pg_password> <bot_token> <rop_chat_id>
-Strapi secrets are generated automatically.
+ADMIN_SESSION_SECRET is generated automatically.
 """
-import secrets, base64, sys, os
-
-def b64key():
-    return base64.b64encode(secrets.token_bytes(32)).decode()
+import secrets, sys, os
 
 if len(sys.argv) != 4:
     print("Usage: python3 gen-env.py <pg_password> <bot_token> <rop_chat_id>")
@@ -19,18 +16,9 @@ lines = [
     f"POSTGRES_USER=diva",
     f"POSTGRES_PASSWORD={pg_pass}",
     f"POSTGRES_DB=diva",
-    f"APP_KEYS={b64key()},{b64key()}",
-    f"API_TOKEN_SALT={b64key()}",
-    f"ADMIN_JWT_SECRET={b64key()}",
-    f"TRANSFER_TOKEN_SALT={b64key()}",
-    f"JWT_SECRET={b64key()}",
-    f"ENCRYPTION_KEY={b64key()}",
-    f"HOST=0.0.0.0",
-    f"PORT=1337",
-    f"DATABASE_CLIENT=postgres",
     f"DATABASE_URL=postgres://diva:{pg_pass}@postgres:5432/diva",
     f"NEXT_PUBLIC_SITE_URL=http://{server_ip}",
-    f"NEXT_PUBLIC_STRAPI_URL=http://{server_ip}:1337",
+    f"ADMIN_SESSION_SECRET={secrets.token_hex(32)}",
     f"BOT_TOKEN={bot_token}",
     f"ROP_CHAT_ID={rop_chat_id}",
     f"WEB_BASE_URL=http://{server_ip}",

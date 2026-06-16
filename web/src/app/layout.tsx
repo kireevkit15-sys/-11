@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Сайт ДИВА — бухгалтерия для стартапов и отчётность ФСИ',
   description:
-    'Бесплатная консультация по бухгалтерии для стартапов и грантополучателей ФСИ. 5 лет специализации, 488 клиентов.',
+    'Бесплатная консультация по бухгалтерии для стартапов и грантополучателей ФСИ. 5 лет специализации, 780 клиентов.',
 }
 
 export default function RootLayout({

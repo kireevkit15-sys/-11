@@ -3,14 +3,19 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { GithubLogo, Globe, TelegramLogo, ArrowRight } from '@phosphor-icons/react'
-import type { Announcement } from '@/data/announcements'
+import type { Partner } from '@/data/partners'
 import { cn } from '@/lib/utils'
 
-const CATEGORY_LABEL: Record<Announcement['category'], string> = {
+const CATEGORY_LABEL: Record<Partner['category'], string> = {
   fullstack: 'Full-stack',
+  mobile: 'Mobile',
+  ai: 'AI / ML',
+  devops: 'DevOps',
+  design: 'Design',
+  other: 'Другое',
 }
 
-export function AnnouncementCard({ item }: { item: Announcement; featured?: boolean }) {
+export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }) {
   const reduced = useReducedMotion()
   const cardRef = useRef<HTMLDivElement>(null)   // трансформируемый — только для style.transform
   const wrapRef = useRef<HTMLDivElement>(null)    // нетрансформируемая обёртка — для rect
@@ -164,7 +169,7 @@ export function AnnouncementCard({ item }: { item: Announcement; featured?: bool
                 />
               )}
 
-              {item.id === 'diva-alexey' ? (
+              {item.id === 'syntax-labs' ? (
                 /* ── SYNTAX LABS: full-width logo hero ── */
                 <div className="relative z-10 flex flex-col items-center w-full gap-3">
                   {/* Full logo: icon + SYNTAX LABS text */}
@@ -252,6 +257,18 @@ export function AnnouncementCard({ item }: { item: Announcement; featured?: bool
                     )}
                   </div>
                   <div className="relative z-10 mb-3">
+                    {item.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.logoUrl}
+                        alt={item.name}
+                        className="h-16 w-16 rounded-2xl object-contain"
+                        style={{
+                          background: 'rgba(255,255,255,0.06)',
+                          boxShadow: `0 0 0 3px ${hsl}30, 0 0 32px ${hsl}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                        }}
+                      />
+                    ) : (
                     <motion.div
                       className="flex h-16 w-16 items-center justify-center rounded-2xl font-display text-xl font-extrabold text-white"
                       style={{
@@ -269,6 +286,7 @@ export function AnnouncementCard({ item }: { item: Announcement; featured?: bool
                     >
                       {initials}
                     </motion.div>
+                    )}
                     {item.available && (
                       <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 bg-emerald-400"
                         style={{ borderColor: hslDeep }}>

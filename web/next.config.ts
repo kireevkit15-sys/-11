@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         hostname: 'img.youtube.com',
         pathname: '/**',
       },
+      // Strapi media URLs
+      {
+        protocol: 'https',
+        hostname: '**',
+        pathname: '/uploads/**',
+      },
     ],
   },
 };

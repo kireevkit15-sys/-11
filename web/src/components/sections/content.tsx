@@ -6,10 +6,33 @@ import type { ReactElement } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { Play, ArrowUpRight } from '@phosphor-icons/react'
 
-import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { ContentVideoDialog } from './content-video-dialog'
+import { getVideos, getSocialLinks } from '@/lib/cms'
+
+// ============================================================================
+// CMS DATA TYPES (Strapi v5 — плоские данные)
+// ============================================================================
+
+type VideoFromCMS = {
+  title: string
+  videoId: string
+  platform: string
+  description?: string | null
+  views: number
+  duration?: string | null
+  thumbnailUrl?: string | null
+  sortOrder: number
+}
+
+type SocialLinkFromCMS = {
+  platform: string
+  label: string
+  href: string
+  actionText?: string | null
+  sortOrder: number
+}
 
 // ============================================================================
 // TYPES
@@ -36,10 +59,10 @@ type SocialLink = {
 }
 
 // ============================================================================
-// DATA
+// DATA — Fallback values when CMS is unavailable
 // ============================================================================
 
-const videos: VideoItem[] = [
+const fallbackVideos: VideoItem[] = [
   {
     id: 'v1',
     channel: 'youtube',
@@ -119,7 +142,7 @@ const videos: VideoItem[] = [
   },
 ]
 
-const socialLinks: SocialLink[] = [
+const fallbackSocialLinks: SocialLink[] = [
   { id: 'vk', label: 'ВКонтакте', href: 'https://vk.com/ac_diva', action: 'отзывы и новости', icon: 'vk' },
   { id: 'tg', label: 'Telegram', href: 'https://t.me/diva_accounting', action: 'быстрые разборы', icon: 'tg' },
   { id: 'youtube', label: 'YouTube', href: 'https://youtube.com/channel/UCLDax7nGHf8K1AiP23Z00sA', action: 'видео-инструкции', icon: 'youtube' },
@@ -129,12 +152,6 @@ const socialLinks: SocialLink[] = [
 // ============================================================================
 // CONFIG
 // ============================================================================
-
-const channelConfig: Record<string, { label: string; color: string }> = {
-  youtube: { label: 'YouTube', color: '#EF4444' },
-  rutube: { label: 'RuTube', color: '#3B82F6' },
-  vkvideo: { label: 'VK Видео', color: '#4C6EF5' },
-}
 
 const iconColors: Record<string, { main: string; bg: string; glow: string }> = {
   vk: { main: '#0077FF', bg: 'rgba(0,119,255,0.15)', glow: 'rgba(0,119,255,0.4)' },
@@ -271,20 +288,22 @@ function StarField() {
   const lastMove = useRef(0)
 
   useEffect(() => {
-    if (reduced || !sectionRef.current || !spotlightRef.current) return
+    const section = sectionRef.current
+    const spotlight = spotlightRef.current
+    if (reduced || !section || !spotlight) return
 
     const handleMouseMove = (e: MouseEvent) => {
       // Throttle to ~30fps
       if (e.timeStamp - lastMove.current < 33) return
       lastMove.current = e.timeStamp
 
-      const rect = sectionRef.current!.getBoundingClientRect()
-      spotlightRef.current!.style.left = `${e.clientX - rect.left}px`
-      spotlightRef.current!.style.top = `${e.clientY - rect.top}px`
+      const rect = section.getBoundingClientRect()
+      spotlight.style.left = `${e.clientX - rect.left}px`
+      spotlight.style.top = `${e.clientY - rect.top}px`
     }
 
-    sectionRef.current.addEventListener('mousemove', handleMouseMove)
-    return () => sectionRef.current?.removeEventListener('mousemove', handleMouseMove)
+    section.addEventListener('mousemove', handleMouseMove)
+    return () => section.removeEventListener('mousemove', handleMouseMove)
   }, [reduced])
 
   return (
@@ -672,9 +691,12 @@ function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number
 // SOCIAL CARD
 // ============================================================================
 
+const FALLBACK_ICON_COLORS = { main: '#A78BFA', bg: 'rgba(167,139,250,0.15)', glow: 'rgba(167,139,250,0.4)' }
+
 function SocialCard({ link, index }: { link: SocialLink; index: number }) {
   const reduced = useReducedMotion()
-  const colors = iconColors[link.id]!
+  // Защита: для неизвестной платформы берём брендовый fallback (без падения).
+  const colors = iconColors[link.id] ?? iconColors[link.icon] ?? FALLBACK_ICON_COLORS
 
   return (
     <motion.a
@@ -725,11 +747,77 @@ function SocialCard({ link, index }: { link: SocialLink; index: number }) {
 }
 
 // ============================================================================
+// CMS DATA CONVERTERS
+// ============================================================================
+
+// Strapi v5: данные приходят напрямую без .attributes
+function convertCmsVideos(cmsVideos: VideoFromCMS[]): VideoItem[] {
+  return cmsVideos.map((v, idx) => ({
+    id: String(idx),
+    channel: v.platform === 'rutube' ? 'rutube' : 'youtube',
+    videoId: v.videoId,
+    cover: v.thumbnailUrl || `https://i.ytimg.com/vi/${v.videoId}/maxresdefault.jpg`,
+    coverAlt: v.title,
+    title: v.title,
+    description: v.description || '',
+    views: String(v.views || 0),
+    duration: v.duration || '0:00',
+  }))
+}
+
+// Strapi v5: данные приходят напрямую без .attributes
+function convertCmsSocialLinks(cmsLinks: SocialLinkFromCMS[]): SocialLink[] {
+  const iconMap: Record<string, SocialLink['icon']> = {
+    vk: 'vk',
+    telegram: 'tg',
+    youtube: 'youtube',
+    rutube: 'rutube',
+  }
+
+  return cmsLinks.map(link => {
+    const icon = iconMap[link.platform] || 'vk'
+    return {
+      id: icon, // id должен совпадать с ключами iconColors (vk/tg/youtube/rutube)
+      label: link.label,
+      href: link.href,
+      action: link.actionText || '',
+      icon,
+    }
+  })
+}
+
+// ============================================================================
 // SECTION
 // ============================================================================
 
 export function ContentSection() {
   const [activeVideo, setActiveVideo] = useState<VideoItem | null>(null)
+  const [videos, setVideos] = useState<VideoItem[]>(fallbackVideos)
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(fallbackSocialLinks)
+
+  // Fetch data from CMS on mount
+  useEffect(() => {
+    async function fetchCmsData() {
+      try {
+        const [cmsVideos, cmsSocialLinks] = await Promise.all([
+          getVideos(),
+          getSocialLinks(),
+        ])
+
+        if (cmsVideos && cmsVideos.length > 0) {
+          setVideos(convertCmsVideos(cmsVideos))
+        }
+
+        if (cmsSocialLinks && cmsSocialLinks.length > 0) {
+          setSocialLinks(convertCmsSocialLinks(cmsSocialLinks))
+        }
+      } catch (error) {
+        console.warn('Failed to fetch CMS data, using fallback:', error)
+      }
+    }
+
+    fetchCmsData()
+  }, [])
 
   return (
     <>

@@ -7,9 +7,23 @@ import { Sparkle, TelegramLogo } from '@phosphor-icons/react'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { AnnouncementCard } from '@/components/sections/announcement-card'
-import { announcements, categories } from '@/data/announcements'
-import type { Announcement } from '@/data/announcements'
+import { partners as staticPartners, partnerTags as staticTags } from '@/data/partners'
+import type { Partner } from '@/data/partners'
 import { cn } from '@/lib/utils'
+
+// Fetch partners from our API
+async function fetchPartners(): Promise<Partner[]> {
+  try {
+    const res = await fetch('/api/content/partners', {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) throw new Error('API error')
+    const json = await res.json()
+    return json.data || []
+  } catch {
+    return []
+  }
+}
 
 // CTA блок с бегущим огнём и анимированной кнопкой
 function CtaBlock() {
@@ -344,16 +358,38 @@ function RobotNeonRing() {
 
 export default function AnnouncementsPage() {
   const reduced = useReducedMotion()
-  const [activeCategory, setActiveCategory] = useState<Announcement['category'] | 'all'>('all')
+  const [activeCategory] = useState<Partner['category'] | 'all'>('all')
+  const [tagsExpanded, setTagsExpanded] = useState(false)
+  const [cmsPartners, setCmsPartners] = useState<Partner[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch partners from our API
+  useEffect(() => {
+    async function load() {
+      setIsLoading(true)
+      const data = await fetchPartners()
+      setCmsPartners(data)
+      setIsLoading(false)
+    }
+    load()
+  }, [])
+
+  // Use API data if available, fallback to static data
+  const partnersData = cmsPartners.length > 0 ? cmsPartners : staticPartners
+  const partnerTagsData = staticTags
+
+  const visibleTags = tagsExpanded ? partnerTagsData : partnerTagsData.slice(0, 8)
+  const hiddenTagsCount = partnerTagsData.length - visibleTags.length
 
   const filtered = useMemo(() => {
-    return announcements.filter((a) => {
+    return partnersData.filter((a) => {
       return activeCategory === 'all' || a.category === activeCategory
     })
-  }, [activeCategory])
+  }, [partnersData, activeCategory])
 
-  const visibleAnnouncements = filtered.filter((item) => item.id === 'diva-alexey')
-  const showLoadingCard = activeCategory === 'all' || activeCategory === 'fullstack'
+  // Show all partners from API (or just featured if loading)
+  const visiblePartners = isLoading ? filtered.filter((item) => item.id === 'syntax-labs') : filtered
+  const showLoadingCard = (activeCategory === 'all' || activeCategory === 'fullstack') && !isLoading
 
   return (
     <div className="relative min-h-screen noise-overlay -mt-[80px] pt-[80px] sm:-mt-[88px] sm:pt-[88px]" style={{ backgroundColor: 'var(--brand-ink)' }}>
@@ -493,7 +529,7 @@ export default function AnnouncementsPage() {
           <section className="relative pb-0" style={{ marginTop: '0' }}>
             <HudTerminal />
             <div className="flex flex-col gap-4 lg:max-w-[55%]">
-              <SectionEyebrow number="01" variant="dark">Объявления клиентов</SectionEyebrow>
+              <SectionEyebrow number="01" variant="dark">Партнёры и команды</SectionEyebrow>
               <h1 className="font-display text-5xl font-extrabold leading-[1.02] tracking-[-0.035em] text-white md:text-6xl">
                 Специалисты,{' '}
                 <span className="font-serif-accent italic text-brand-soft">готовые к работе</span>
@@ -502,21 +538,26 @@ export default function AnnouncementsPage() {
                             <div className="flex items-center gap-2">
                 <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
                   animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
-                <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>1 команда · обновлено сегодня</span>
+                <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{partnersData.length} команд · обновлено сегодня</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <button key={cat.value} onClick={() => setActiveCategory(cat.value)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-all',
-                      activeCategory === cat.value
-                        ? 'border-brand-soft/40 bg-brand-soft/20 text-brand-soft shadow-[0_0_14px_rgba(167,139,250,0.3)]'
-                        : 'border-white/15 bg-black/35 text-white/60 hover:border-white/30 hover:text-white',
-                    )}
-                    style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-                    {cat.label}
-                  </button>
+                {visibleTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/60"
+                    style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                  >
+                    {tag}
+                  </span>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setTagsExpanded((value) => !value)}
+                  className="rounded-full border border-brand-soft/30 bg-brand-soft/12 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brand-soft transition hover:border-brand-soft/50 hover:bg-brand-soft/18"
+                  style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                >
+                  {tagsExpanded ? 'Свернуть' : `Ещё ${hiddenTagsCount}`}
+                </button>
               </div>
             </div>
           </section>
@@ -528,7 +569,7 @@ export default function AnnouncementsPage() {
           transition={{ duration: 0.48, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           className="mt-8 pb-8 sm:mt-10 lg:mt-12"
         >
-          {visibleAnnouncements.length === 0 ? (
+          {visiblePartners.length === 0 ? (
             <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-3xl border border-white/[0.07] bg-white/[0.025] px-6 py-16 text-center">
               <Sparkle size={40} weight="duotone" className="text-white/20" />
               <p className="text-sm text-white/40">Ничего не найдено.</p>
@@ -541,7 +582,7 @@ export default function AnnouncementsPage() {
               transition={{ layout: { duration: 0.36, ease: [0.22, 1, 0.36, 1] } }}
             >
               <AnimatePresence mode="popLayout" initial={false}>
-                {visibleAnnouncements.map((item, i) => (
+                {visiblePartners.map((item, i) => (
                   <motion.div
                     key={item.id}
                     layout
@@ -569,7 +610,7 @@ export default function AnnouncementsPage() {
                     exit={reduced ? undefined : { opacity: 0, y: -10, scale: 0.985 }}
                     transition={{
                       duration: 0.42,
-                      delay: reduced ? 0 : Math.min(visibleAnnouncements.length * 0.045, 0.28),
+                      delay: reduced ? 0 : Math.min(visiblePartners.length * 0.045, 0.28),
                       ease: [0.22, 1, 0.36, 1],
                       layout: { duration: 0.34, ease: [0.22, 1, 0.36, 1] },
                     }}

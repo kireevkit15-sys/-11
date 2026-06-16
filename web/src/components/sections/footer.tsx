@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -23,6 +23,40 @@ import { Input } from '@/components/ui/input'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { ConsultModal } from '@/components/sections/consult-modal'
+import { getSocialLinks, getFooterConfig } from '@/lib/cms'
+
+type SocialLinkFromCMS = {
+  platform: string
+  label: string
+  href: string
+  actionText?: string | null
+  iconColor?: string | null
+  sortOrder: number
+}
+
+type SocialLink = { name: string; href: string; Icon: PhosphorIcon }
+
+const platformToIcon: Record<string, PhosphorIcon> = {
+  vk: ChatCircleDots,
+  telegram: TelegramLogo,
+  youtube: YoutubeLogo,
+  rutube: TelegramLogo,
+}
+
+// Strapi v5: данные приходят напрямую без .attributes
+function convertCmsSocialLinks(links: SocialLinkFromCMS[]): SocialLink[] {
+  return links.map(link => ({
+    name: link.label,
+    href: link.href,
+    Icon: platformToIcon[link.platform] || ChatCircleDots,
+  }))
+}
+
+const fallbackSocials: SocialLink[] = [
+  { name: 'ВКонтакте', href: 'https://vk.com/ac_diva', Icon: ChatCircleDots },
+  { name: 'Telegram', href: 'https://t.me/diva_accounting', Icon: TelegramLogo },
+  { name: 'YouTube', href: 'https://youtube.com/channel/UCLDax7nGHf8K1AiP23Z00sA', Icon: YoutubeLogo },
+]
 
 type FooterLink = { label: string; href: string }
 
@@ -48,18 +82,73 @@ const docsLinks: FooterLink[] = [
   { label: 'Публичная оферта', href: '#offer' },
 ]
 
-const socials: { name: string; href: string; Icon: PhosphorIcon }[] = [
-  { name: 'ВКонтакте', href: 'https://vk.com/ac_diva', Icon: ChatCircleDots },
-  { name: 'Telegram', href: 'https://t.me/diva_accounting', Icon: TelegramLogo },
-  { name: 'YouTube', href: 'https://youtube.com/channel/UCLDax7nGHf8K1AiP23Z00sA', Icon: YoutubeLogo },
-]
+type FooterData = {
+  email: string
+  phones: string[]
+  address: string
+  workHours: string
+  legalInfo: string
+  copyright: string
+  navColumns: { title: string; links: FooterLink[] }[]
+}
+
+const FALLBACK_FOOTER: FooterData = {
+  email: 'diva.consulting.b@gmail.com',
+  phones: ['+7 996 636-69-71', '+7 983 236-16-91'],
+  address: 'Томская обл., д. Барабинка, ул. Советская, д. 2А',
+  workHours: 'Пн–СБ 08:00–18:00 МСК',
+  legalInfo: '© 2026 ООО «ДИВА БУХГАЛТЕРИЯ» · ИНН 7000014616 · ОГРН 1247000001841',
+  copyright: 'Сделано с фокусом на ФСИ-гранты',
+  navColumns: [
+    { title: 'Услуги', links: servicesLinks },
+    { title: 'Компания', links: companyLinks },
+    { title: 'Документы', links: docsLinks },
+  ],
+}
+
+function telHref(phone: string) {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`
+}
 
 export function Footer() {
+  const [socials, setSocials] = useState<SocialLink[]>(fallbackSocials)
+  const [footer, setFooter] = useState<FooterData>(FALLBACK_FOOTER)
   const [modalOpen, setModalOpen] = useState(false)
   const [checklistEmail, setChecklistEmail] = useState('')
   const [checklistSubmitting, setChecklistSubmitting] = useState(false)
   const [checklistSent, setChecklistSent] = useState(false)
   const [checklistError, setChecklistError] = useState('')
+
+  useEffect(() => {
+    getSocialLinks()
+      .then(data => {
+        if (data && data.length > 0) {
+          setSocials(convertCmsSocialLinks(data))
+        }
+      })
+      .catch(() => {
+        // Use fallback socials on error
+      })
+
+    getFooterConfig()
+      .then((cfg) => {
+        if (cfg) {
+          setFooter({
+            email: cfg.email || FALLBACK_FOOTER.email,
+            phones: Array.isArray(cfg.phones) && cfg.phones.length ? cfg.phones : FALLBACK_FOOTER.phones,
+            address: cfg.address || FALLBACK_FOOTER.address,
+            workHours: cfg.workHours || FALLBACK_FOOTER.workHours,
+            legalInfo: cfg.legalInfo || FALLBACK_FOOTER.legalInfo,
+            copyright: cfg.copyright || FALLBACK_FOOTER.copyright,
+            navColumns:
+              Array.isArray(cfg.navColumns) && cfg.navColumns.length
+                ? (cfg.navColumns as FooterData['navColumns'])
+                : FALLBACK_FOOTER.navColumns,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleChecklistSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -325,45 +414,44 @@ export function Footer() {
                 ))}
               </div>
               <a
-                href="mailto:diva.consulting.b@gmail.com"
+                href={`mailto:${footer.email}`}
                 className="inline-flex items-center gap-2 font-mono text-xs text-white/50 transition hover:text-white"
               >
                 <EnvelopeSimple weight="duotone" className="h-3.5 w-3.5" />
-                diva.consulting.b@gmail.com
+                {footer.email}
               </a>
-              <p className="font-mono text-[10px] text-white/35">Пн–СБ 08:00–18:00 МСК</p>
+              <p className="font-mono text-[10px] text-white/35">{footer.workHours}</p>
             </div>
 
-            {/* COL 2 — Услуги */}
-            <FooterColumn title="Услуги" links={servicesLinks} />
+            {/* COL 2 — первая колонка меню */}
+            <FooterColumn
+              title={footer.navColumns[0]?.title ?? 'Услуги'}
+              links={footer.navColumns[0]?.links ?? servicesLinks}
+            />
 
-            {/* COL 3 — Компания */}
-            <FooterColumn title="Компания" links={companyLinks} />
+            {/* COL 3 — вторая колонка меню */}
+            <FooterColumn
+              title={footer.navColumns[1]?.title ?? 'Компания'}
+              links={footer.navColumns[1]?.links ?? companyLinks}
+            />
 
-            {/* COL 4 — Документы + контакты */}
-            <FooterColumn title="Документы" links={docsLinks}>
+            {/* COL 4 — третья колонка меню + контакты */}
+            <FooterColumn
+              title={footer.navColumns[2]?.title ?? 'Документы'}
+              links={footer.navColumns[2]?.links ?? docsLinks}
+            >
               <div className="mt-6 flex flex-col gap-2 text-xs text-white/55">
-                <div className="flex items-center gap-2">
-                  <PhoneCall weight="duotone" className="h-3 w-3 text-white/40" />
-                  <a
-                    href="tel:+79966366971"
-                    className="font-mono transition hover:text-white"
-                  >
-                    +7 996 636-69-71
-                  </a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <PhoneCall weight="duotone" className="h-3 w-3 text-white/40" />
-                  <a
-                    href="tel:+79832361691"
-                    className="font-mono transition hover:text-white"
-                  >
-                    +7 983 236-16-91
-                  </a>
-                </div>
+                {footer.phones.map((phone) => (
+                  <div key={phone} className="flex items-center gap-2">
+                    <PhoneCall weight="duotone" className="h-3 w-3 text-white/40" />
+                    <a href={telHref(phone)} className="font-mono transition hover:text-white">
+                      {phone}
+                    </a>
+                  </div>
+                ))}
                 <div className="flex items-start gap-2">
                   <MapPin weight="duotone" className="mt-0.5 h-3 w-3 shrink-0 text-white/40" />
-                  <span>Томская обл., д. Барабинка, ул. Советская, д. 2А</span>
+                  <span>{footer.address}</span>
                 </div>
               </div>
             </FooterColumn>
@@ -371,12 +459,8 @@ export function Footer() {
 
           {/* Bottom bar */}
           <div className="mt-14 flex flex-col gap-4 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
-            <p className="font-mono text-[11px] text-white/40">
-              © 2026 ООО «ДИВА БУХГАЛТЕРИЯ» · ИНН 7000014616 · ОГРН 1247000001841
-            </p>
-            <p className="font-mono text-[11px] text-white/40">
-              Сделано с фокусом на ФСИ-гранты
-            </p>
+            <p className="font-mono text-[11px] text-white/40">{footer.legalInfo}</p>
+            <p className="font-mono text-[11px] text-white/40">{footer.copyright}</p>
           </div>
         </div>
       </section>

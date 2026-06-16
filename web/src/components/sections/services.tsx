@@ -1,16 +1,13 @@
 /**
  * ServicesSection — Server Component
  *
- * Загружает данные из CMS (Strapi) и передаёт их в клиентский компонент.
- * Все данные услуг хранятся в CMS, включая FSI (Фонд Содействия Инновациям).
+ * Загружает данные из CMS (Strapi) и передаёт в клиентский компонент.
+ * Иконки из @phosphor-icons/react требуют 'use client' — передаём имена,
+ * а маппинг в компоненты происходит в services-client.tsx.
  */
 
-import { Rocket, Buildings, Lightning, Trophy } from '@phosphor-icons/react'
-import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
-import { getServices } from '@/lib/cms'
-import { ServicesSectionClient, type LocalService } from './services-client'
-import { SectionEyebrow } from '@/components/sections/section-eyebrow'
-import { FadeIn } from '@/components/motion/fade-in'
+import { getServices, type Service } from '@/lib/cms'
+import { ServicesSectionClient, type IconName, type LocalService } from './services-client'
 
 // ---------------------------------------------------------------------------
 // Fallback данные — используются когда CMS недоступен
@@ -20,7 +17,7 @@ const fallbackNormalServices: LocalService[] = [
     title: 'Бухгалтерия для АУСН',
     price: '5 900',
     perUnit: '₽ / мес',
-    icon: Lightning,
+    icon: 'Lightning' as IconName,
     items: [
       'Расчёт по страховым взносам',
       '6-НДФЛ',
@@ -38,7 +35,7 @@ const fallbackNormalServices: LocalService[] = [
     title: 'Бухгалтерия для УСН',
     price: '7 900',
     perUnit: '₽ / мес',
-    icon: Rocket,
+    icon: 'Rocket' as IconName,
     items: [
       'Декларация по УСН',
       'Бухгалтерская отчётность',
@@ -58,7 +55,7 @@ const fallbackNormalServices: LocalService[] = [
     title: 'Бухгалтерия для ОСН',
     price: '8 900',
     perUnit: '₽ / мес',
-    icon: Buildings,
+    icon: 'Buildings' as IconName,
     items: [
       'Бухгалтерская отчётность',
       'Декларация по НДС',
@@ -78,12 +75,12 @@ const fallbackNormalServices: LocalService[] = [
   },
 ]
 
-const fallbackFsiService = {
+const fallbackFsiService: LocalService & { fsiPrice: string } = {
   title: 'Отчёты по Студенческому стартапу и Старт 1',
   price: '35 000',
   fsiPrice: '35 000',
   perUnit: '₽ / грант',
-  icon: Trophy,
+  icon: 'Trophy' as IconName,
   items: [
     'Подготовка договора с ФСИ',
     'Подготовка финансового отчёта',
@@ -93,38 +90,35 @@ const fallbackFsiService = {
     'Подготовка карты РИД',
     'Исправление всех замечаний кураторов',
   ],
-  isFsi: true as const,
+  isFsi: true,
 }
 
 // ---------------------------------------------------------------------------
 // Конвертация данных из CMS в локальный формат
 // ---------------------------------------------------------------------------
-type CmsService = Awaited<ReturnType<typeof getServices>>[0]
 
-function getIconForTaxSystem(taxSystem: string): PhosphorIcon {
-  switch (taxSystem) {
-    case 'ФСИ':
-      return Trophy
-    case 'УСН-Д':
-    case 'УСН-ДР':
-      return Rocket
-    case 'ОСН':
-      return Buildings
-    default:
-      return Lightning
-  }
+const ICON_BY_TAX_SYSTEM: Record<string, IconName> = {
+  'ФСИ': 'Trophy',
+  'УСН-Д': 'Rocket',
+  'УСН-ДР': 'Rocket',
+  'ОСН': 'Buildings',
+  'АУСН': 'Lightning',
 }
 
-function convertCmsService(service: CmsService): LocalService {
-  const attrs = service.attributes
-  const isFsi = attrs.tax_system === 'ФСИ'
+function getIconForTaxSystem(taxSystem: string): IconName {
+  return ICON_BY_TAX_SYSTEM[taxSystem] ?? 'Lightning'
+}
+
+function convertCmsService(service: Service): LocalService {
+  // Strapi v5: данные приходят напрямую без .attributes
+  const isFsi = service.taxSystem === 'ФСИ'
 
   return {
-    title: attrs.title,
-    price: attrs.base_price?.toLocaleString('ru-RU') || '0',
+    title: service.title,
+    price: service.basePrice?.toLocaleString('ru-RU') || '0',
     perUnit: isFsi ? '₽ / грант' : '₽ / мес',
-    icon: getIconForTaxSystem(attrs.tax_system),
-    items: attrs.includes || [],
+    icon: getIconForTaxSystem(service.taxSystem),
+    items: service.includes || [],
     isFsi,
   }
 }
@@ -145,7 +139,7 @@ export async function ServicesSection() {
   const fsiService = fsiServiceRaw
     ? {
         ...fsiServiceRaw,
-        isFsi: true as const,
+        isFsi: true,
         fsiPrice: fsiServiceRaw.price,
       }
     : fallbackFsiService
@@ -155,7 +149,7 @@ export async function ServicesSection() {
     normalServices.length > 0 ? normalServices : fallbackNormalServices
 
   return (
-    <div className="relative isolate overflow-hidden bg-aurora-dark text-white noise-overlay">
+    <section id="services" className="relative isolate overflow-hidden bg-aurora-dark text-white noise-overlay">
       {/* Тонкая точечная сетка */}
       <div
         className="pointer-events-none absolute inset-0 pattern-dot-grid-dark opacity-50"
@@ -188,11 +182,13 @@ export async function ServicesSection() {
       />
 
       <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-20 px-4 py-32 sm:px-6 sm:py-40">
-        {/* ────────── Header ────────── */}
-        <FadeIn className="flex max-w-3xl flex-col gap-5">
-          <SectionEyebrow variant="dark" number="02">
-            Наши услуги
-          </SectionEyebrow>
+        {/* ────────── Header (Server-rendered) ────────── */}
+        <div className="flex max-w-3xl flex-col gap-5">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-brand-soft/60">02</span>
+            <span className="h-px flex-1 bg-white/10" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-brand-soft/60">Наши услуги</span>
+          </div>
 
           <h2 className="font-display text-5xl font-extrabold leading-[0.98] tracking-[-0.04em] text-white sm:text-6xl md:text-7xl">
             Бухгалтерия под систему
@@ -216,7 +212,7 @@ export async function ServicesSection() {
               раскройте карточку — покажем весь перечень
             </span>
           </p>
-        </FadeIn>
+        </div>
 
         {/* ────────── Cards Grid ────────── */}
         <ServicesSectionClient
@@ -224,6 +220,6 @@ export async function ServicesSection() {
           fsiService={fsiService}
         />
       </div>
-    </div>
+    </section>
   )
 }

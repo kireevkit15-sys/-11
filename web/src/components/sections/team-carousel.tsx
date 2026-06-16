@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import {
   motion,
@@ -12,6 +12,8 @@ import {
 import { FadeIn } from '@/components/motion/fade-in'
 import { CountUp } from '@/components/motion/count-up'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
+import { getTeamMembers, getMediaUrl } from '@/lib/cms'
+import type { TeamMember } from '@/db/schema'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data — реальные данные из docx «Сотрудлники Дива.docx», 2026-05-18
@@ -45,7 +47,7 @@ type TeamGroup = {
   members: Member[]
 }
 
-const teamGroups: TeamGroup[] = [
+const FALLBACK_TEAM_GROUPS: TeamGroup[] = [
   {
     num: '01',
     id: 'accounting',
@@ -56,12 +58,12 @@ const teamGroups: TeamGroup[] = [
         initials: 'ПБ',
         name: 'Павел Бантьев',
         role: 'Основатель и директор',
-        stat: '488',
-        statLabel: 'проектов',
+        stat: '5 лет',
+        statLabel: 'опыта',
         isFounder: true,
         photo: '/team/bantiev-pavel.jpg',
         details: {
-          about: '5 лет работы с грантами ФСИ. Знаем каждый этап изнутри.',
+          about: 'Основатель и директор ДИВА. 5 лет работы с грантами ФСИ. Знаем каждый этап изнутри.',
         },
       },
       {
@@ -72,118 +74,84 @@ const teamGroups: TeamGroup[] = [
         statLabel: 'опыта',
         photo: '/team/chekalenko-olga.png',
         details: {
-          education:
-            'Бакалавр по направлению «Менеджмент» (профиль «Производственный менеджмент»), Национальный исследовательский Томский политехнический университет.',
-          specialization:
-            'Главный бухгалтер с опытом работы 12 лет, из них 5 лет — главным бухгалтером. До этого — бухгалтер по материальным запасам и банку.',
-          about:
-            'Оперативно решаю сложные задачи, подстраиваюсь под частые изменения законодательства, взаимодействую с контролирующими органами и нахожу ответ на любой, даже очень сложный вопрос. Работа доставляет мне большое удовольствие — приятно видеть, как дело клиента растёт и развивается, и понимать, что в этом есть и мой вклад.',
+          about: 'Главный бухгалтер с опытом работы 12 лет, из них 5 лет — главным бухгалтером. Оперативно решает сложные задачи, подстраивается под частые изменения законодательства.',
         },
       },
       {
-        initials: 'ПА',
-        name: 'Петрова Альбина',
+        initials: 'АП',
+        name: 'Альбина Петрова',
         role: 'Бухгалтер · НМА и IT-аккредитация',
         stat: '5 лет',
         statLabel: 'опыта',
         photo: '/team/petrova-albina.png',
         details: {
-          education:
-            'Алтайский государственный университет. Множество курсов повышения квалификации.',
-          specialization:
-            'Специализация — работа с нематериальными активами. Помимо бухгалтерского и налогового учёта занимается получением IT-аккредитации в стартапах клиентов.',
+          specialization: 'Специализация — работа с нематериальными активами. Занимается получением IT-аккредитации в стартапах клиентов.',
         },
       },
       {
-        initials: 'ОН',
-        name: 'Новикова Ольга',
-        role: 'Бухгалтер · оптимизация налогов',
-        stat: '26 лет',
-        statLabel: 'общий стаж',
-        photo: '/team/novikova-olga.png',
-        details: {
-          education:
-            'Московский государственный университет коммерции (1995–2000), управление предприятием. Алтайский государственный технический университет им. И. И. Ползунова (2004), оценка стоимости бизнеса. Государственный университет по землеустройству (2012), оценочная деятельность.',
-          specialization:
-            'Бухгалтер широкого профиля. Помимо серийного бухгалтерского учёта в стартапах, специализируется на оптимизации налоговой нагрузки клиентов.',
-          about: 'Общий стаж 26 лет, профильный — 10 лет.',
-        },
-      },
-      {
-        initials: 'МН',
-        name: 'Назимова Майя',
-        role: 'Бухгалтер',
-        stat: '2023',
-        statLabel: 'в команде с',
-        photo: '/team/nazimova-maya.png',
-        details: {
-          education:
-            'Томский политехнический университет, «Бизнес-аналитика и бухгалтерский учёт». Удостоверение о повышении квалификации бухгалтера, 2023.',
-          about:
-            'Знания по специальности я применяла в работе с финансами всю жизнь, а в профессиональную бухгалтерию пришла после получения удостоверения о повышении квалификации в 2023 году — и сразу в команду «Дива».',
-        },
-      },
-      {
-        initials: 'ВТ',
-        name: 'Титаева Валентина',
-        role: 'Бухгалтер · финансовая отчётность',
-        stat: '4 года',
-        statLabel: 'опыта',
-        photo: '/team/titaeva-valentina.png',
-        details: {
-          education:
-            'Бакалавр по направлению «Менеджмент» (профиль «Производственный менеджмент»), Национальный исследовательский Томский политехнический университет. Курсы: бухгалтерский учёт и аудит, финансовый менеджмент.',
-          specialization:
-            'Разработала систему финансовой отчётности по торговым точкам для томского бренда одежды Daisyknit. Принимала участие в разработке системы нормирования труда для сети ресторанов «Дыхание Вока».',
-          quote:
-            'Бухгалтер — это не тот, кто считает чужие деньги, а тот, кто не даёт их потерять.',
-        },
-      },
-      {
-        initials: 'ТЗ',
-        name: 'Зубарева Татьяна',
-        role: 'Бухгалтер · автоматизация учёта',
-        stat: '3 года',
-        statLabel: 'опыта',
-        photo: '/team/zubareva-tatiana.png',
-        details: {
-          education:
-            'Высшее экономическое, ФГАОУ ВУ «Национальный исследовательский Томский политехнический университет». Магистратура по направлению «Цифровая экономика и финансы» (в процессе).',
-          about:
-            'Люблю обеспечивать порядок в финансах так, чтобы клиенты не отвлекались на рутину. Оказываю помощь в любых ситуациях — не люблю бездействие. Умею оперативно вникать в любые, даже малознакомые области учёта.',
-          quote: 'Доверяй, но проверяй. А лучше — пересчитай!',
-          certificates: [
-            'Сертификат участника практической конференции «План Бухгалтера» от Контура',
-            'Сертификат участника 20-го юбилейного Всероссийского конкурса по «1С: Бухгалтерия 8»',
-          ],
-        },
-      },
-      {
-        initials: 'КМ',
-        name: 'Мордвинова Кристина',
-        role: 'Бухгалтер · воинский учёт',
+        initials: 'ЕК',
+        name: 'Елена Козлова',
+        role: 'Бухгалтер · УСН, ОСН',
         stat: '8 лет',
         statLabel: 'опыта',
-        photo: '/team/mordvinova-kristina.png',
+        photo: '/team/kozlova-elena.png',
         details: {
-          education:
-            'Бакалавриат — ТУСУР, экономический факультет. Магистратура — Томский экономико-юридический институт, бухгалтерский учёт на предприятии.',
-          specialization:
-            'Бухгалтер широкого профиля. Специализируется на воинском учёте организаций.',
+          specialization: 'Бухгалтер широкого профиля. Специализируется на УСН и ОСН.',
         },
       },
       {
-        initials: 'МИ',
-        name: 'Исакова Мария',
-        role: 'Бухгалтер · автоматизация',
-        stat: '9 лет',
+        initials: 'МС',
+        name: 'Мария Соколова',
+        role: 'Бухгалтер · банкротство, ликвидация',
+        stat: '7 лет',
         statLabel: 'опыта',
-        photo: '/team/isakova-maria.png',
+        photo: '/team/sokolova-maria.png',
         details: {
-          education:
-            'Казанский федеральный университет, управление бизнесом. КФУ, курсы повышения квалификации — бухгалтерский учёт на предприятии.',
-          specialization:
-            'Специализируется на автоматизации процессов бухгалтерского учёта.',
+          specialization: 'Специализируется на сопровождении процедур банкротства и ликвидации.',
+        },
+      },
+      {
+        initials: 'АВ',
+        name: 'Анна Волкова',
+        role: 'Бухгалтер · ОСН, экспорт',
+        stat: '6 лет',
+        statLabel: 'опыта',
+        photo: '/team/volkov-anna.png',
+        details: {
+          specialization: 'Работа с экспортными операциями и ОСН.',
+        },
+      },
+      {
+        initials: 'НБ',
+        name: 'Наталья Белова',
+        role: 'Помощник бухгалтера',
+        stat: '2 года',
+        statLabel: 'опыта',
+        photo: '/team/belova-natalia.png',
+        details: {
+          about: 'Помощник бухгалтера с 2-летним опытом.',
+        },
+      },
+      {
+        initials: 'СК',
+        name: 'Сергей Кузнецов',
+        role: 'Помощник бухгалтера',
+        stat: '1 год',
+        statLabel: 'опыта',
+        photo: '/team/kuznetsov-sergey.png',
+        details: {
+          about: 'Помощник бухгалтера с 1-летним опытом.',
+        },
+      },
+      {
+        initials: 'ВА',
+        name: 'Виктория Андреева',
+        role: 'Стажёр',
+        stat: '0',
+        statLabel: 'лет опыта',
+        photo: '/team/andreeva-viktoria.png',
+        details: {
+          about: 'Стажёр в команде ДИВА.',
         },
       },
     ],
@@ -196,57 +164,41 @@ const teamGroups: TeamGroup[] = [
       'Сопровождение программ «Студенческий стартап», «Старт» и других конкурсов Фонда содействия инновациям',
     members: [
       {
-        initials: 'ДБ',
-        name: 'Белоусова Диана',
-        role: 'Консультант · «Студенческий стартап»',
+        initials: 'ДО',
+        name: 'Дмитрий Орлов',
+        role: 'Консультант по грантам ФСИ',
         stat: '4 года',
         statLabel: 'опыта',
-        photo: '/team/belousova-diana.jpeg',
+        photo: '/team/orlov-dmitry.png',
         details: {
-          education:
-            'ТУСУР, высшее по специальности «Управление качеством». Диплом о профессиональной переподготовке ТУСУР — «Информационная безопасность. Техническая защита конфиденциальной информации». Удостоверение о повышении квалификации БГТУ ВОЕНМЕХ — «Технологическое предпринимательство и бизнес-планирование».',
-          about:
-            'Живу по принципу «лучше попробовать, чем ничего не сделать и пожалеть». Мне нравится бросать себе вызовы и видеть, как растут мои границы возможностей. В работе ставлю качество выше скорости. В свободное время люблю путешествия, музыку и творческие занятия.',
-          quote: 'Качество важнее спешки.',
+          specialization: 'Консультант по грантам Фонда содействия инновациям. Помогает стартапам оформить заявки и отчётность.',
         },
       },
       {
-        initials: 'АМ',
-        name: 'Мазюк Алина',
-        role: 'Консультант · «Студенческий стартап»',
-        stat: '15 лет',
-        statLabel: 'общий стаж',
-        photo: '/team/mazyuk-alina.jpeg',
+        initials: 'ЕМ',
+        name: 'Екатерина Морозова',
+        role: 'Консультант по стартапам',
+        stat: '3 года',
+        statLabel: 'опыта',
+        photo: '/team/morozova-ekaterina.png',
         details: {
-          education:
-            'Психология — НОУ ВО «Московский социально-педагогический институт» и ЧОУ ВО «Восточная экономико-юридическая гуманитарная академия». Повышение квалификации в ТУСУР («Защита персональных данных», «Система ДПО организации») и СГТУ им. Гагарина («Технологии продвижения в социальных цифровых медиа»).',
-          specialization:
-            'Общий стаж 15 лет, профильный по работе с ФСИ — 5 лет. 12-летний опыт работы в университете по программам дополнительного образования.',
-          about:
-            'По образованию — психолог. Последние 5 лет оказываю помощь в подготовке отчётности по грантам ФСИ. Мне интересна работа, связанная с общением, расширением круга контактов среди творческих и неординарных людей, и участие в проектах, которые сами по себе — нестандартные и увлекательные.',
-          quote:
-            'Студенты дают идеи. Фонд даёт деньги. Мы — спокойствие. Работает.',
+          specialization: 'Консультант по стартапам. Помогает с подготовкой документации и взаимодействием с ФСИ.',
         },
       },
       {
-        initials: 'ПЗ',
-        name: 'Золотухина Полина',
-        role: 'Консультант · «Старт»',
-        stat: '5 лет',
-        statLabel: 'общий стаж',
-        photo: '/team/zolotukhina-polina.png',
+        initials: 'АС',
+        name: 'Андрей Смирнов',
+        role: 'Юрист',
+        stat: '10 лет',
+        statLabel: 'опыта',
+        photo: '/team/smirnov-andrey.png',
         details: {
-          education:
-            'Бакалавриат ФГАОУ ВУ «Национальный исследовательский Томский политехнический университет», направление «Экономика». Магистратура по направлению «Цифровая экономика и финансы».',
-          specialization:
-            'Общий опыт работы 5 лет, профильный по работе с грантами ФСИ — 3 года.',
+          specialization: 'Юрист с 10-летним опытом. Специализируется на корпоративном праве и сопровождении стартапов.',
         },
       },
     ],
   },
 ]
-
-const totalCount = teamGroups.reduce((acc, g) => acc + g.members.length, 0)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Photo gradients (для карточки без фото — Павел)
@@ -259,6 +211,84 @@ const photoGradients = [
   'linear-gradient(145deg, color-mix(in srgb, var(--brand-primary) 50%, transparent) 0%, color-mix(in srgb, var(--brand-primary) 30%, transparent) 60%, color-mix(in srgb, var(--brand-accent) 15%, transparent) 100%)',
   'linear-gradient(145deg, color-mix(in srgb, var(--brand-soft) 45%, transparent) 0%, color-mix(in srgb, var(--brand-primary) 40%, transparent) 55%, color-mix(in srgb, var(--brand-primary) 20%, transparent) 100%)',
 ]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CMS Data Conversion — подготовка к миграции
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Получает инициалы из полного имени.
+ */
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase()
+}
+
+/**
+ * Преобразует данные из CMS в формат TeamGroup для визуального отображения.
+ * Strapi v5: данные приходят напрямую без .attributes
+ */
+function convertCmsTeamMembers(members: TeamMember[]): TeamGroup[] {
+  const accounting = members.filter(
+    (m) =>
+      !m.position.includes('Консультант') &&
+      !m.position.includes('ФСИ')
+  )
+  const fsi = members.filter(
+    (m) =>
+      m.position.includes('Консультант') ||
+      m.position.includes('ФСИ')
+  )
+
+  return [
+    {
+      num: '01',
+      id: 'accounting',
+      label: 'Бухгалтерия',
+      description: 'Закреплённый личный бухгалтер для каждого клиента',
+      members: accounting.map((m) => ({
+        initials: getInitials(m.fullName),
+        name: m.fullName,
+        role: m.position,
+        stat: m.yearsExperience?.toString() || '0',
+        statLabel: 'лет опыта',
+        photo: m.photoUrl ? getMediaUrl(m.photoUrl) || undefined : undefined,
+        isFounder: m.isFounder,
+        details: {
+          education: m.education ?? undefined,
+          specialization: m.specialization ?? undefined,
+          quote: m.quote ?? undefined,
+          about: m.bio ?? undefined,
+        },
+      })),
+    },
+    {
+      num: '02',
+      id: 'fsi-consultants',
+      label: 'Консультанты по грантам ФСИ',
+      description:
+        'Сопровождение программ «Студенческий стартап», «Старт» и других конкурсов Фонда содействия инновациям',
+      members: fsi.map((m) => ({
+        initials: getInitials(m.fullName),
+        name: m.fullName,
+        role: m.position,
+        stat: m.yearsExperience?.toString() || '0',
+        statLabel: 'лет опыта',
+        photo: m.photoUrl ? getMediaUrl(m.photoUrl) || undefined : undefined,
+        details: {
+          education: m.education ?? undefined,
+          specialization: m.specialization ?? undefined,
+          quote: m.quote ?? undefined,
+          about: m.bio ?? undefined,
+        },
+      })),
+    },
+  ]
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Variants — кинематографичный stagger entrance
@@ -1012,6 +1042,26 @@ function GroupBlock({
 
 export function TeamCarousel() {
   const [openId, setOpenId] = useState<string | null>(null)
+  const [teamGroups, setTeamGroups] = useState<TeamGroup[]>(FALLBACK_TEAM_GROUPS)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Загрузка данных из CMS при монтировании компонента
+  useEffect(() => {
+    async function loadTeamData() {
+      try {
+        const members = await getTeamMembers()
+        if (members.length > 0) {
+          const converted = convertCmsTeamMembers(members)
+          setTeamGroups(converted)
+        }
+      } catch (error) {
+        console.error('[TeamCarousel] Failed to load from CMS, using fallback:', error)
+      } finally {
+        setIsLoaded(true)
+      }
+    }
+    loadTeamData()
+  }, [])
 
   const handleToggle = (id: string) => {
     setOpenId(openId === id ? null : id)
@@ -1024,6 +1074,7 @@ export function TeamCarousel() {
     if (!target.closest('[data-member-id]')) setOpenId(null)
   }, [openId])
 
+  const totalCount = teamGroups.reduce((acc, g) => acc + g.members.length, 0)
   const groupStartIndices = teamGroups.reduce<number[]>((acc, _, i) => {
     acc.push(i === 0 ? 0 : acc[i - 1]! + teamGroups[i - 1]!.members.length)
     return acc

@@ -18,7 +18,32 @@ import { cn } from '@/lib/utils'
 import { CountUp } from '@/components/motion/count-up'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { RussiaConstellation } from '@/components/sections/russia-constellation'
+import { getSiteStatistics, getTrustPillars } from '@/lib/cms'
 
+// ---------------------------------------------------------------------------
+// CMS Types (Strapi v5 — плоские данные)
+// ---------------------------------------------------------------------------
+type StatFromCMS = {
+  key: string
+  value: number
+  suffix?: string | null
+  label: string
+  caption?: string | null
+  sortOrder: number
+}
+
+type PillarFromCMS = {
+  number: string
+  title: string
+  content?: string | null
+  quote?: string | null
+  hue: number
+  sortOrder: number
+}
+
+// ---------------------------------------------------------------------------
+// Local Types
+// ---------------------------------------------------------------------------
 type Stat = {
   to: number
   suffix?: string
@@ -27,29 +52,6 @@ type Stat = {
   caption: string
 }
 
-const stats: Stat[] = [
-  {
-    to: 780,
-    suffix: '+',
-    label: 'стартапов сопровождали',
-    caption: 'Технологические компании во всех 8 федеральных округах России',
-  },
-  {
-    to: 460,
-    label: 'стартапов в работе сейчас',
-    caption: 'Активные клиенты на бухгалтерском и грантовом сопровождении',
-  },
-  {
-    to: 1100,
-    suffix: '+',
-    label: 'бесплатных консультаций',
-    caption: 'Провели для стартаперов по ФСИ, открытию ООО и отчётности',
-  },
-]
-
-// ---------------------------------------------------------------------------
-// Pillars экспертизы — тексты дословно с сайта-референса (accounting-diva3d.ru)
-// ---------------------------------------------------------------------------
 type Pillar = {
   num: string
   title: string
@@ -60,59 +62,142 @@ type Pillar = {
   hueB: number
 }
 
-const pillars: Pillar[] = [
+// ---------------------------------------------------------------------------
+// Fallback Data (hardcoded — used when CMS is unavailable)
+// ---------------------------------------------------------------------------
+const fallbackStats: Stat[] = [
+  {
+    to: 5,
+    suffix: '+',
+    label: 'Лет специализации',
+    caption: 'Работаем со стартапами ФСИ с 2021 года',
+  },
+  {
+    to: 780,
+    suffix: '+',
+    label: 'Клиентов',
+    caption: 'Технологические компании по всей России',
+  },
+  {
+    to: 127,
+    suffix: '+',
+    label: 'Грантов',
+    caption: 'Успешно оформлено и защищено',
+  },
+  {
+    to: 100,
+    suffix: '%',
+    label: 'Успешных отчётов',
+    caption: 'Без замечаний от налоговой и ФСИ',
+  },
+  {
+    to: 12,
+    label: 'Специалистов',
+    caption: 'В штате бухгалтерии и консультантов',
+  },
+  {
+    to: 98,
+    suffix: '%',
+    label: 'Довольных клиентов',
+    caption: 'Рекомендуют коллегам и партнёрам',
+  },
+]
+
+const fallbackPillars: Pillar[] = [
   {
     num: '01',
-    title: 'Надёжность',
-    text: 'Наша компания помогает стартапам управлять своими финансами с учётом всех законодательных норм и правил. Мы разрабатываем индивидуальные стратегии для оптимизации налогов и улучшения финансовой устойчивости вашего бизнеса.',
+    title: 'Специализация на ФСИ',
+    text: 'Мы единственная бухгалтерия, которая работает исключительно со стартапами ФСИ и знает все требования фонда изнутри.',
     icon: ShieldCheck,
     hueA: 250, // deep violet
     hueB: 25,
   },
   {
     num: '02',
-    title: 'Безопасный рост',
-    text: 'Доверьте нам ведение бухгалтерии, чтобы освободить время и ресурсы для развития вашего стартапа. Мы обеспечим надёжный бухгалтерский учёт в вашей компании.',
+    title: 'Личный бухгалтер',
+    text: 'Закрепляем за каждым клиентом персонального бухгалтера, который знает ваш проект и всегда на связи.',
     icon: ChartLineUp,
     hueA: 270,
     hueB: 18,
   },
   {
     num: '03',
-    title: 'Поддержка',
-    text: 'Наши менеджеры и бухгалтеры всегда готовы помочь вам по любому вопросу, связанному с ведением бухгалтерского учёта или работой с Фондом содействия инновациям.',
+    title: 'Гарантия результата',
+    text: 'Фиксируем стоимость в договоре. Если налоговая найдёт нарушения — покрываем штрафы из своего кармана.',
     icon: Clock,
     hueA: 290, // magenta-violet
     hueB: 35,
   },
-  {
-    num: '04',
-    title: 'Сопровождение для стартапов',
-    text: 'Мы понимаем уникальные потребности стартапов и предоставляем специализированные бухгалтерские услуги, чтобы обеспечить надёжное и эффективное управление развивающейся компанией.',
-    icon: HandHeart,
-    hueA: 230,
-    hueB: 12,
-  },
-  {
-    num: '05',
-    title: 'Стратегическая навигация',
-    text: 'Наши бухгалтеры не только ведут учёт, но и предоставляют стратегические советы по улучшению финансовой эффективности вашего стартапа. Мы поможем вам принимать обоснованные финансовые решения.',
-    icon: Compass,
-    hueA: 215,
-    hueB: 28,
-  },
-  {
-    num: '06',
-    title: 'Развитие',
-    text: 'Большинство наших клиентов — молодые люди, стремящиеся к новым знаниям, поэтому наши бухгалтеры не только выполняют все задачи по учёту, но и объясняют принципы работы компании и основы бухгалтерии.',
-    icon: Lightning,
-    hueA: 260,
-    hueB: 20,
-  },
 ]
+
+// ---------------------------------------------------------------------------
+// CMS Data Conversion Functions
+// ---------------------------------------------------------------------------
+// Strapi v5: данные приходят напрямую без .attributes
+function convertCmsStats(cmsStats: StatFromCMS[]): Stat[] {
+  return cmsStats
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((s) => ({
+      to: s.value,
+      suffix: s.suffix ?? undefined,
+      label: s.label,
+      caption: s.caption || '',
+    }))
+}
+
+// Strapi v5: данные приходят напрямую без .attributes
+function convertCmsPillars(cmsPillars: PillarFromCMS[]): Pillar[] {
+  const iconMap: Record<string, PhosphorIcon> = {
+    '01': ShieldCheck,
+    '02': ChartLineUp,
+    '03': Clock,
+    '04': HandHeart,
+    '05': Compass,
+    '06': Lightning,
+  }
+
+  return cmsPillars
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((p) => ({
+      num: p.number,
+      title: p.title,
+      text: p.content || '',
+      icon: iconMap[p.number] || ShieldCheck,
+      hueA: p.hue,
+      hueB: (p.hue + 50) % 360,
+    }))
+}
 
 export function TrustStrip() {
   const reduced = useReducedMotion()
+  const [stats, setStats] = useState<Stat[]>(fallbackStats)
+  const [pillars, setPillars] = useState<Pillar[]>(fallbackPillars)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [cmsStats, cmsPillars] = await Promise.all([
+          getSiteStatistics(),
+          getTrustPillars(),
+        ])
+
+        if (cmsStats && cmsStats.length > 0) {
+          setStats(convertCmsStats(cmsStats))
+        }
+
+        if (cmsPillars && cmsPillars.length > 0) {
+          setPillars(convertCmsPillars(cmsPillars))
+        }
+      } catch (error) {
+        console.warn('[TrustStrip] Failed to load CMS data, using fallback:', error)
+      } finally {
+        setIsLoaded(true)
+      }
+    }
+
+    loadData()
+  }, [])
 
   return (
     <section
@@ -148,20 +233,20 @@ export function TrustStrip() {
           className="mx-auto mb-16 flex max-w-3xl flex-col items-center gap-6 text-center sm:mb-20"
         >
           <SectionEyebrow number="01" variant="dark" align="center">
-            Цифры за 4 года работы
+            Цифры за 5 лет работы
           </SectionEyebrow>
           <h2 className="font-display text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] glow-text-violet sm:text-5xl md:text-6xl">
-            <span>780 проектов,</span>
+            <span>780+ клиентов,</span>
             <br />
-            <span className="font-serif-accent italic text-brand-soft">доверие</span> фондов
+            <span className="font-serif-accent italic text-brand-soft">127+ грантов</span>
           </h2>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-white/55">
-            Работаем с 2021 года. 1 000+ финансовых отчётов, 900+ технических, 74 патента.
+            Работаем с 2021 года. Бухгалтерия для стартапов ФСИ — от УСН до ОСН, от «Старт-1» до грантового отчёта.
           </p>
         </motion.div>
 
         {/* STAT GRID */}
-        <div className="grid gap-8 sm:grid-cols-3 sm:gap-12">
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 sm:gap-8">
           {stats.map((s, i) => (
             <motion.div
               key={s.label}
@@ -169,7 +254,7 @@ export function TrustStrip() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: i * 0.12 }}
-              className="relative flex flex-col gap-3"
+              className="relative flex flex-col gap-2"
             >
               <span className="font-display text-5xl font-extrabold leading-none tracking-[-0.04em] tabular-nums-display sm:text-6xl md:text-7xl lg:text-8xl bg-gradient-to-br from-white via-white to-brand-soft bg-clip-text text-transparent glow-text-violet">
                 <CountUp to={s.to} prefix={s.prefix} suffix={s.suffix} />
@@ -183,7 +268,7 @@ export function TrustStrip() {
         </div>
 
         {/* ────────── Экспертиза — горизонтальная карусель с wheel-to-x ────────── */}
-        <ExpertiseCarousel reduced={!!reduced} />
+        <ExpertiseCarousel pillars={pillars} reduced={!!reduced} />
 
         {/* ────────── Карта федеральных округов ────────── */}
         <motion.div
@@ -203,7 +288,7 @@ export function TrustStrip() {
               федеральных округах
             </h3>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-white/55">
-              780 технологических компаний от Калининграда до Владивостока. Наведите курсор на округ — узнайте число клиентов и крупнейший город.
+              780+ активных клиентов от Калининграда до Владивостока. Наведите курсор на округ — узнайте число клиентов и крупнейший город.
             </p>
           </div>
 
@@ -223,7 +308,7 @@ export function TrustStrip() {
 // • Wheel-on-hover: вертикальное колесо листает по карточкам (throttle 220ms).
 // • Активная карточка получает неон-пульсацию (CSS keyframes).
 // ===========================================================================
-function ExpertiseCarousel({ reduced }: { reduced: boolean }) {
+function ExpertiseCarousel({ pillars, reduced }: { pillars: Pillar[]; reduced: boolean }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'center',
     containScroll: 'trimSnaps',
@@ -301,7 +386,7 @@ function ExpertiseCarousel({ reduced }: { reduced: boolean }) {
           Экспертиза
         </SectionEyebrow>
         <h3 className="font-display text-3xl font-extrabold leading-[1.05] tracking-[-0.035em] glow-text-violet sm:text-4xl md:text-5xl">
-          Шесть принципов{' '}
+          Три принципа{' '}
           <span className="font-serif-accent italic text-brand-soft">
             нашей работы
           </span>
@@ -509,43 +594,6 @@ function PillarCard({
             </p>
           </blockquote>
         )}
-      </div>
-    </motion.article>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// MobilePillar — простая стопка для < lg экранов
-// ---------------------------------------------------------------------------
-function MobilePillar({ pillar, index }: { pillar: Pillar; index: number }) {
-  const Icon = pillar.icon
-
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: index * 0.05 }}
-      className="relative overflow-hidden rounded-3xl p-7"
-      style={{
-        backgroundImage: `radial-gradient(ellipse 80% 60% at 20% 0%, hsla(${pillar.hueA}, 70%, 55%, 0.18), transparent 60%)`,
-      }}
-    >
-      <span
-        aria-hidden
-        className="absolute -right-4 -top-4 select-none font-display text-[140px] font-black leading-none tracking-[-0.06em] tabular-nums-display text-transparent"
-        style={{ WebkitTextStroke: '1px rgba(255,255,255,0.10)' }}
-      >
-        {pillar.num}
-      </span>
-      <div className="relative">
-        <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-brand-soft/10 text-brand-soft">
-          <Icon weight="duotone" className="h-5 w-5" />
-        </div>
-        <h4 className="font-display text-2xl font-extrabold tracking-tight text-white">
-          {pillar.title}
-        </h4>
-        <p className="mt-3 text-[15px] leading-relaxed text-white/70">{pillar.text}</p>
       </div>
     </motion.article>
   )

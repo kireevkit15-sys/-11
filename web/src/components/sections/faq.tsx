@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { CaretDown } from '@phosphor-icons/react'
@@ -8,12 +8,14 @@ import { CaretDown } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
+import { getFaqs } from '@/lib/cms'
+import type { Faq } from '@/db/schema'
 
 // ---------------------------------------------------------------------------
 // Data
 // Ответы построены строго на фактах с сайта-референса (accounting-diva3d.ru):
 // — система налогообложения, программы ФСИ, оплата со 2-го этапа гранта,
-// — 5-этапный процесс, поддержка 12/6, 488 клиентов в 8 ФО, 9 лет опыта
+// — 5-этапный процесс, поддержка 12/6, 780 клиентов в 8 ФО, 5 лет специализации
 // и существующих данных проекта (тарифы из services.tsx). Без выдумок.
 // ---------------------------------------------------------------------------
 
@@ -25,7 +27,44 @@ type FaqGroup = {
   questions: QA[]
 }
 
-const faqGroups: FaqGroup[] = [
+// ---------------------------------------------------------------------------
+// Конвертация данных из CMS в формат компонента
+// ---------------------------------------------------------------------------
+const CMS_CATEGORY_ORDER = ['Цены и оплата', 'ФСИ', 'Бухгалтерия', 'О компании'] as const
+
+const CMS_CATEGORY_LABELS: Record<typeof CMS_CATEGORY_ORDER[number], string> = {
+  'Цены и оплата': 'Тарифы и оплата',
+  'ФСИ': 'Гранты ФСИ',
+  'Бухгалтерия': 'Процесс работы',
+  'О компании': 'Гарантии и данные',
+}
+
+function convertCmsFaqs(faqs: Faq[]): FaqGroup[] {
+  // Strapi v5: данные приходят напрямую без .attributes
+  const categories: Record<string, QA[]> = {}
+
+  faqs.forEach((faq) => {
+    const cat = faq.category || 'О компании'
+    if (!categories[cat]) categories[cat] = []
+    categories[cat].push({
+      q: faq.question,
+      a: faq.answer,
+    })
+  })
+
+  // Формируем группы в нужном порядке
+  return CMS_CATEGORY_ORDER.map((cat, i) => ({
+    num: String(i + 1).padStart(2, '0'),
+    id: cat.toLowerCase().replace(/\s+/g, '-'),
+    label: CMS_CATEGORY_LABELS[cat] || cat,
+    questions: categories[cat] || [],
+  })).filter(group => group.questions.length > 0)
+}
+
+// ---------------------------------------------------------------------------
+// Данные (fallback при недоступности CMS)
+// ---------------------------------------------------------------------------
+const FALLBACK_FAQ_GROUPS: FaqGroup[] = [
   {
     num: '01',
     id: 'pricing',
@@ -60,7 +99,7 @@ const faqGroups: FaqGroup[] = [
       },
       {
         q: 'Что если ФСИ не принял отчёт?',
-        a: 'Дорабатываем замечания кураторов до полного принятия — это входит в стоимость. За 4 года работы мы сопроводили 780 стартапов: типичные замечания знаем заранее и стараемся их не допускать.',
+        a: 'Дорабатываем замечания кураторов до полного принятия — это входит в стоимость. За 5 лет работы мы сопроводили 780 стартапов: типичные замечания знаем заранее и стараемся их не допускать.',
       },
     ],
   },
@@ -107,16 +146,32 @@ const faqGroups: FaqGroup[] = [
 // ---------------------------------------------------------------------------
 // Section
 // ---------------------------------------------------------------------------
-// Гарантированно определён — массив выше всегда непустой.
-const FIRST_GROUP = faqGroups[0]!
 
 export function FaqSection() {
   const reduced = useReducedMotion()
-  const [activeGroupId, setActiveGroupId] = useState(FIRST_GROUP.id)
+  const [faqGroups, setFaqGroups] = useState<FaqGroup[]>(FALLBACK_FAQ_GROUPS)
+  const [activeGroupId, setActiveGroupId] = useState<string>(FALLBACK_FAQ_GROUPS[0]?.id ?? '')
   const [openIdx, setOpenIdx] = useState<number>(0)
+  const [isLoaded, setIsLoaded] = useState(false)
 
-  const activeGroup: FaqGroup =
-    faqGroups.find((g) => g.id === activeGroupId) ?? FIRST_GROUP
+  // Загрузка данных из CMS
+  useEffect(() => {
+    async function loadFaqs() {
+      const faqs = await getFaqs()
+      if (faqs.length > 0) {
+        const groups = convertCmsFaqs(faqs)
+        if (groups.length > 0) {
+          setFaqGroups(groups)
+          setActiveGroupId(groups[0]?.id ?? '')
+          setIsLoaded(true)
+        }
+      }
+    }
+    loadFaqs()
+  }, [])
+
+  // faqGroups гарантированно непустой (FALLBACK_FAQ_GROUPS)
+  const activeGroup: FaqGroup = faqGroups.find((g) => g.id === activeGroupId) ?? faqGroups[0]!
 
   const handleGroupChange = (id: string) => {
     setActiveGroupId(id)

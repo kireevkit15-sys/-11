@@ -6,6 +6,7 @@ import { CaretLeft, CaretRight, Quotes, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
+import { getReviews, type Review } from '@/lib/cms'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,8 @@ type Testimonial = {
   text: string
 }
 
-const testimonials: Testimonial[] = [
+// Fallback — используется если CMS недоступна
+const fallbackTestimonials: Testimonial[] = [
   {
     name: 'Владимир Кудзоев',
     vkUrl: 'https://vk.com/99vkudzoev',
@@ -66,6 +68,18 @@ const testimonials: Testimonial[] = [
     text: 'Я начала сотрудничество после победы в студенческом стартапе и с самого начала осталась очень довольна. Специалисты компании всегда были на связи, оперативно помогали решать вопросы и подробно объясняли все нюансы. За всё время сотрудничества у меня не возникло ни единого нарекания — только положительный опыт.',
   },
 ]
+
+// ─── Конвертация CMS Review → Testimonial ────────────────────────────────────
+
+// Strapi v5: данные приходят напрямую без .attributes
+function reviewToTestimonial(review: Review): Testimonial {
+  return {
+    name: review.authorName,
+    vkUrl: review.sourceUrl || 'https://vk.com',
+    avatarUrl: 'https://vk.com/',
+    text: review.text,
+  }
+}
 
 // ─── Avatar — инициалы как fallback ──────────────────────────────────────────
 
@@ -285,9 +299,25 @@ export function TestimonialsSection() {
   const reduced = useReducedMotion()
   const [active, setActive] = useState(0)
   const [selected, setSelected] = useState<Testimonial | null>(null)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const trackRef = useRef<HTMLDivElement>(null)
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scrollRaf = useRef<number | null>(null)
+
+  // Загрузка данных из CMS
+  useEffect(() => {
+    getReviews(8)
+      .then(reviews => {
+        if (reviews.length > 0) {
+          setTestimonials(reviews.map(reviewToTestimonial))
+        } else {
+          setTestimonials(fallbackTestimonials)
+        }
+      })
+      .catch(() => {
+        setTestimonials(fallbackTestimonials)
+      })
+  }, [])
 
   const GAP = 20
 
@@ -311,6 +341,7 @@ export function TestimonialsSection() {
   // Автопрокрутка
   useEffect(() => {
     if (reduced) return
+    if (testimonials.length === 0) return
     autoRef.current = setInterval(() => {
       setActive(a => {
         const next = (a + 1) % testimonials.length
@@ -322,7 +353,7 @@ export function TestimonialsSection() {
       })
     }, 5000)
     return () => { if (autoRef.current) clearInterval(autoRef.current) }
-  }, [reduced])
+  }, [reduced, testimonials.length])
 
   const pauseAuto = useCallback(() => {
     if (autoRef.current) clearInterval(autoRef.current)
@@ -335,7 +366,7 @@ export function TestimonialsSection() {
     const idx = Math.round(el.scrollLeft / (cardWidth + GAP))
     const clamped = Math.max(0, Math.min(testimonials.length - 1, idx))
     setActive(prev => (prev === clamped ? prev : clamped))
-  }, [])
+  }, [testimonials.length])
 
   const onTrackScroll = useCallback(() => {
     pauseAuto()
@@ -346,6 +377,11 @@ export function TestimonialsSection() {
   useEffect(() => () => {
     if (scrollRaf.current !== null) cancelAnimationFrame(scrollRaf.current)
   }, [])
+
+  // Не рендерим секцию пока данные грузятся
+  if (testimonials.length === 0) {
+    return null
+  }
 
   return (
     <>
@@ -408,7 +444,7 @@ export function TestimonialsSection() {
         >
           {testimonials.map((t, i) => (
             <div
-              key={t.name}
+              key={t.name + i}
               className="h-[430px] sm:h-[410px]"
               style={{ width: 'min(380px, calc(100vw - 32px))', minWidth: 'min(380px, calc(100vw - 32px))', scrollSnapAlign: 'start' }}
               onClick={() => { pauseAuto(); scrollTo(i) }}

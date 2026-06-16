@@ -8,8 +8,8 @@ SSL-терминация и reverse proxy для прода. Caddy v2 (alpine) �
 
 | Хост                | Бэкенд        | Назначение            |
 | ------------------- | ------------- | --------------------- |
-| `{$DOMAIN}`         | `web:3000`    | Публичный сайт (Next.js) |
-| `{$ADMIN_DOMAIN}`   | `cms:1337`    | Админка Strapi        |
+| `{$DOMAIN}`         | `web:3000`        | Публичный сайт (Next.js) |
+| `{$ADMIN_DOMAIN}`   | `diva-admin:3001` | Кастомная админ-панель   |
 
 Сервис `bot` публичного маршрута не имеет.
 
@@ -29,7 +29,7 @@ SSL-терминация и reverse proxy для прода. Caddy v2 (alpine) �
 | Переменная     | Пример                | Описание                                    |
 | -------------- | --------------------- | ------------------------------------------- |
 | `DOMAIN`       | `diva.example.com`    | Основной домен сайта.                       |
-| `ADMIN_DOMAIN` | `admin.diva.example.com` | Домен админки Strapi.                    |
+| `ADMIN_DOMAIN` | `admin.diva.example.com` | Домен кастомной админ-панели (diva-admin). |
 | `ACME_EMAIL`   | `ops@example.com`     | Email для регистрации в Let's Encrypt.      |
 
 В Caddyfile они подставляются синтаксисом `{$VAR}` на старте процесса.
@@ -55,12 +55,12 @@ SSL-терминация и reverse proxy для прода. Caddy v2 (alpine) �
 
 ## IP-whitelist для админки
 
-По умолчанию админка доступна с любого IP (защита — учётка Strapi).
+По умолчанию админка доступна с любого IP (защита — сессия diva-admin).
 Чтобы дополнительно ограничить по IP:
 
 1. Скопируйте `whitelist.example.txt` и впишите свои адреса/подсети.
 2. В блоке `{$ADMIN_DOMAIN}` файла `Caddyfile.prod` раскомментируйте
-   три строки `@allowed` / `@denied` / `respond @denied 403` и подставьте
+   строки `@denied` / `respond @denied 403` и подставьте
    IP-адреса через пробел (CIDR поддерживается, IPv6 тоже).
 3. Перезапустите контейнер caddy:
    `docker compose -f ops/docker-compose.prod.yml restart caddy`.
@@ -80,6 +80,5 @@ docker run --rm \
 ## Локальная разработка
 
 Обычно Caddy локально не нужен — открывайте `http://localhost:3000`
-(Next.js) и `http://localhost:1337/admin` (Strapi) напрямую.
-`Caddyfile.dev` пригодится, если хочется проверить прокси-слой перед
-деплоем на VPS.
+(Next.js) напрямую. `Caddyfile.dev` пригодится, если хочется проверить
+прокси-слой перед деплоем на VPS.

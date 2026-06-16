@@ -23,7 +23,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'ЦФО',
     name: 'Центральный',
     capital: 'Москва',
-    clients: 113,
+    clients: 114,
     color: '#A78BFA',
   },
   NWFO: {
@@ -31,7 +31,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'СЗФО',
     name: 'Северо-Западный',
     capital: 'Санкт-Петербург',
-    clients: 144,
+    clients: 142,
     color: '#F472B6',
   },
   SFO: {
@@ -39,7 +39,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'ЮФО',
     name: 'Южный',
     capital: 'Ростов-на-Дону',
-    clients: 46,
+    clients: 45,
     color: '#FB923C',
   },
   NCFD: {
@@ -47,7 +47,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'СКФО',
     name: 'Северо-Кавказский',
     capital: 'Ставрополь',
-    clients: 23,
+    clients: 22,
     color: '#FBBF24',
   },
   VFD: {
@@ -63,7 +63,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'УрФО',
     name: 'Уральский',
     capital: 'Екатеринбург',
-    clients: 112,
+    clients: 110,
     color: '#38BDF8',
   },
   SFD: {
@@ -71,7 +71,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'СФО',
     name: 'Сибирский',
     capital: 'Новосибирск',
-    clients: 147,
+    clients: 145,
     color: '#818CF8',
   },
   FEFO: {
@@ -79,7 +79,7 @@ export const DISTRICTS: Record<DistrictCode, DistrictMeta> = {
     shortName: 'ДФО',
     name: 'Дальневосточный',
     capital: 'Владивосток',
-    clients: 113,
+    clients: 120,
     color: '#22D3EE',
   },
 }

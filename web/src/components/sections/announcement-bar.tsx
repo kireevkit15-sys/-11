@@ -7,6 +7,7 @@ import {
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { getAnnouncementMessages } from '@/lib/cms'
 
 type Message = {
   Icon: PhosphorIcon
@@ -15,7 +16,7 @@ type Message = {
   href?: string
 }
 
-const MESSAGES: Message[] = [
+const FALLBACK_MESSAGES: Message[] = [
   {
     Icon: Lightning,
     text: 'Чек-лист грантополучателя ФСИ + календарь дедлайнов 2026',
@@ -24,7 +25,7 @@ const MESSAGES: Message[] = [
   },
   {
     Icon: Lightning,
-    text: '5 лет специализации · 488 клиентов · 94% остаются после консультации',
+    text: '5 лет специализации · 780 клиентов · 94% остаются после консультации',
     cta: 'Все цифры',
     href: '#trust',
   },
@@ -46,16 +47,36 @@ const ROTATION_MS = 7000
 export function AnnouncementBar() {
   const reduced = useReducedMotion()
   const [index, setIndex] = useState(0)
+  const [messages, setMessages] = useState<Message[]>(FALLBACK_MESSAGES)
+
+  useEffect(() => {
+    getAnnouncementMessages()
+      .then((rows) => {
+        const visible = rows.filter((r) => r.available !== false)
+        if (visible.length > 0) {
+          setMessages(
+            visible.map((r) => ({
+              Icon: Lightning,
+              text: r.message ?? '',
+              cta: r.ctaText ?? undefined,
+              href: r.href ?? undefined,
+            })),
+          )
+          setIndex(0)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (reduced) return
     const id = setInterval(() => {
-      setIndex((i) => (i + 1) % MESSAGES.length)
+      setIndex((i) => (i + 1) % messages.length)
     }, ROTATION_MS)
     return () => clearInterval(id)
-  }, [reduced])
+  }, [reduced, messages.length])
 
-  const current = MESSAGES[index]
+  const current = messages[index]
   if (!current) return null
   const { Icon, text, cta, href } = current
 
@@ -96,7 +117,7 @@ export function AnnouncementBar() {
 
         {/* Точки-индикаторы */}
         <div className="hidden items-center gap-1.5 sm:flex">
-          {MESSAGES.map((_, i) => (
+          {messages.map((_, i) => (
             <button
               key={i}
               onClick={() => setIndex(i)}

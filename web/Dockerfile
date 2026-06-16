@@ -1,11 +1,16 @@
 # syntax=docker/dockerfile:1.7
+# ВАЖНО: build context = КОРЕНЬ репозитория (не web/),
+# потому что web импортирует общую схему ../db/schema.ts (alias @/db).
+# В compose: build: { context: .., dockerfile: web/Dockerfile }
 
-# ---------- dev (hot reload, used by docker-compose.dev.yml) ----------
+# ---------- dev (hot reload, docker-compose.dev.yml) ----------
 FROM node:22-alpine AS dev
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY db ./db
+WORKDIR /app/web
+COPY web/package.json web/package-lock.json* ./
 RUN npm install --legacy-peer-deps
-COPY . .
+COPY web ./
 ENV HOST=0.0.0.0
 ENV PORT=3000
 EXPOSE 3000
@@ -13,15 +18,17 @@ CMD ["npm", "run", "dev"]
 
 # ---------- deps ----------
 FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package.json package-lock.json* ./
+WORKDIR /app/web
+COPY web/package.json web/package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
 # ---------- build ----------
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY db ./db
+COPY web ./web
+COPY --from=deps /app/web/node_modules ./web/node_modules
+WORKDIR /app/web
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -36,10 +43,14 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-COPY --from=build /app/public ./public
-COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Next standalone (монорепо): server.js под web/, public + static рядом
+COPY --from=build /app/web/public ./web/public
+COPY --from=build --chown=nextjs:nodejs /app/web/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
+
+# каталог под общий volume загрузок
+RUN mkdir -p /app/web/public/uploads && chown -R nextjs:nodejs /app/web/public
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "web/server.js"]

@@ -8,8 +8,7 @@ Telegram bot for the Diva accounting company website.
   to the sales (ROP) chat with inline action buttons (take / spam / forward).
 - Will handle user subscriptions to FSI (federal reporting) deadline reminders.
 
-See `docs/01-TZ.md` (sections 6.1, 6.3) and `docs/02-Architecture.md`
-(section 1.5) at the repository root for full context.
+See `docs/01-TZ.md` at the repository root for product context.
 
 ## Stack
 

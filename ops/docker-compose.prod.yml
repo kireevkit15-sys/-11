@@ -1,10 +1,8 @@
 # Diva — production stack for the VPS (Selectel / TimeWeb).
 # Usage: `make prod-up` (or `docker compose -f docker-compose.prod.yml --env-file .env up -d`).
 # Caddy is the only ingress (80/443) — terminates TLS via Let's Encrypt and reverse-proxies
-# to web (Next.js) and cms (Strapi). Postgres, cms, web, bot are NOT exposed externally.
-# All services live on the internal `diva` bridge network.
-
-version: '3.9'
+# to web (Next.js) and diva-admin (custom admin panel). Postgres, web, bot, diva-admin
+# are NOT exposed externally. All services live on the internal `diva` bridge network.
 
 networks:
   diva:
@@ -12,7 +10,7 @@ networks:
 
 volumes:
   postgres-data:
-  strapi-uploads:
+  uploads:          # общие пользовательские загрузки (web + diva-admin)
   caddy-data:
   caddy-config:
 
@@ -37,45 +35,36 @@ services:
     networks:
       - diva
 
-  cms:
+  # Одноразовая применялка drizzle-миграций (единый источник схемы из db/migrations).
+  migrate:
     build:
-      context: ../cms
-    container_name: diva-cms
+      context: ../db
+      dockerfile: migrate.Dockerfile
+    container_name: diva-migrate
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
     environment:
-      NODE_ENV: production
-      DATABASE_CLIENT: postgres
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    # No external port — Caddy reverse-proxies admin.${DOMAIN} -> cms:1337.
-    volumes:
-      - strapi-uploads:/app/public/uploads
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:1337/_health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 12
-      start_period: 90s
-    restart: unless-stopped
+    restart: "no"
     networks:
       - diva
 
   web:
     build:
-      context: ../web
+      context: ..
+      dockerfile: web/Dockerfile
     container_name: diva-web
     depends_on:
-      cms:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_STRAPI_URL: https://${ADMIN_DOMAIN}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - uploads:/app/public/uploads   # общий том загрузок (пишет diva-admin, отдаёт сайт)
     # No external port — Caddy reverse-proxies ${DOMAIN} -> web:3000.
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
@@ -105,12 +94,43 @@ services:
     networks:
       - diva
 
+  # Кастомная админ-панель (Next.js, отдельное приложение). Caddy проксирует
+  # ${ADMIN_DOMAIN} -> diva-admin:3001. Требует ADMIN_SESSION_SECRET (>=32 симв.) в .env.
+  diva-admin:
+    build:
+      context: ..
+      dockerfile: diva-admin/Dockerfile
+    container_name: diva-admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      ADMIN_PORT: 3001
+    volumes:
+      - uploads:/app/diva-admin/public/uploads   # общий том загрузок
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - diva
+
   caddy:
     image: caddy:2-alpine
     container_name: diva-caddy
     depends_on:
       - web
-      - cms
+      - diva-admin
     ports:
       - "80:80"
       - "443:443"

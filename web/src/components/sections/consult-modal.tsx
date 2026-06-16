@@ -92,7 +92,7 @@ export function ConsultModal({ onClose }: { onClose: () => void }) {
             {[
               { val: '94%', label: 'остаются клиентами' },
               { val: '780+', label: 'стартапов в работе' },
-              { val: '4 года', label: 'на рынке' },
+              { val: '5 лет', label: 'на рынке' },
             ].map(({ val, label }) => (
               <div key={val} className="flex items-baseline gap-2">
                 <span className="font-display text-xl font-black" style={{ color: 'rgba(251,146,60,0.9)' }}>{val}</span>
