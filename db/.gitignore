@@ -4,6 +4,7 @@ dist/
 .env.local
 *.log
 
-# Drizzle keeps a /meta directory inside ./migrations for snapshot bookkeeping.
-# We let drizzle-kit regenerate it locally; only the SQL files are committed.
-migrations/meta/
+# migrations/meta/ (snapshot + _journal.json) ДОЛЖЕН быть в git — drizzle-kit migrate
+# на чистом сервере читает список миграций именно из _journal.json, локально
+# его негде "regenerate" (см. DEPLOY-BLOCKERS.md, блокер 1). Ранее этот каталог
+# был здесь проигнорирован — это и есть причина бага.

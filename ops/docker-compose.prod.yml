@@ -125,6 +125,30 @@ services:
     networks:
       - diva
 
+  # Разовый инструмент: создаёт/сбрасывает пользователя admin_users.
+  # НЕ поднимается автоматически (profiles: tools) — только по явному запуску:
+  #   docker compose -f docker-compose.prod.yml --profile tools run --rm seed-admin
+  # Нужен отдельно от diva-admin, потому что тот собран как Next.js standalone
+  # и не содержит ни node_modules (tsx — в devDependencies), ни scripts/.
+  # См. DEPLOY-BLOCKERS.md, блокер 3, и diva-admin/seed.Dockerfile.
+  seed-admin:
+    build:
+      context: ..
+      dockerfile: diva-admin/seed.Dockerfile
+    container_name: diva-seed-admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ADMIN_INITIAL_EMAIL: ${ADMIN_INITIAL_EMAIL:-admin@diva.ru}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+    profiles:
+      - tools
+    restart: "no"
+    networks:
+      - diva
+
   caddy:
     image: caddy:2-alpine
     container_name: diva-caddy
@@ -141,7 +165,12 @@ services:
       ADMIN_DOMAIN: ${ADMIN_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     volumes:
-      - ../ops/caddy:/etc/caddy
+      # Монтируем конкретный файл под именем Caddyfile — образ caddy:2-alpine
+      # по умолчанию ищет строго /etc/caddy/Caddyfile. Раньше монтировалась вся
+      # папка ops/caddy/ (там Caddyfile.beget/.dev/.prod, но не "Caddyfile") —
+      # контейнер падал на старте ("open /etc/caddy/Caddyfile: no such file or
+      # directory") и уходил в restart-loop. См. DEPLOY-BLOCKERS.md, блокер 2.
+      - ../ops/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     healthcheck:
