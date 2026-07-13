@@ -7,7 +7,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, getTableColumns } from 'drizzle-orm';
+import type { AnyPgTable } from 'drizzle-orm/pg-core';
 import {
   services,
   caseStudies,
@@ -26,7 +27,7 @@ import {
   glossaryTerms,
 } from '@/db/schema';
 
-const TABLES: Record<string, any> = {
+const TABLES: Record<string, AnyPgTable> = {
   'services': services,
   'case-studies': caseStudies,
   'team-members': teamMembers,
@@ -56,10 +57,15 @@ export async function GET(
 
   try {
     const table = TABLES[entity];
+    const { id: idColumn } = getTableColumns(table);
+    if (!idColumn) {
+      return NextResponse.json({ error: 'У сущности нет колонки id' }, { status: 500 });
+    }
+
     const record = await db
       .select()
       .from(table)
-      .where(eq(table.id, id))
+      .where(eq(idColumn, id))
       .limit(1);
 
     if (record.length === 0) {

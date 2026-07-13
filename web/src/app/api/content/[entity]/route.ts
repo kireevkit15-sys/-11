@@ -11,7 +11,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { sql, eq, asc, and, gte } from 'drizzle-orm';
+import { eq, asc, and, gte, getTableColumns, type SQL } from 'drizzle-orm';
+import type { AnyPgTable, AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   services,
   caseStudies,
@@ -35,7 +36,7 @@ import {
 } from '@/db/schema';
 
 // Маппинг entity name -> schema
-const TABLES: Record<string, any> = {
+const TABLES: Record<string, AnyPgTable> = {
   'hero-configs': heroConfigs,
   'footer-configs': footerConfigs,
   'announcement-messages': announcementMessages,
@@ -58,7 +59,7 @@ const TABLES: Record<string, any> = {
 };
 
 // Маппинг для where clauses
-const TABLE_WHERE_COLUMNS: Record<string, any> = {
+const TABLE_WHERE_COLUMNS: Record<string, Record<string, AnyPgColumn>> = {
   'services': { slug: services.slug, key: services.key },
   'case-studies': { slug: caseStudies.slug },
   'team-members': { isFounder: teamMembers.isFounder },
@@ -96,7 +97,7 @@ export async function GET(
     let query = db.select().from(table).$dynamic();
 
     // Применяем фильтры из query params
-    const filters: any[] = [];
+    const filters: SQL[] = [];
 
     // Фильтр по slug
     if (searchParams.has('slug') && whereColumns.slug) {
@@ -139,8 +140,9 @@ export async function GET(
     }
 
     // Сортировка по sortOrder
-    if (table.sortOrder) {
-      query = query.orderBy(asc(table.sortOrder));
+    const { sortOrder } = getTableColumns(table);
+    if (sortOrder) {
+      query = query.orderBy(asc(sortOrder));
     }
 
     // Лимит

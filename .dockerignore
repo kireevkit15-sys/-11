@@ -1,0 +1,51 @@
+# Корневой .dockerignore — общий для web/Dockerfile и diva-admin/Dockerfile,
+# у которых build context = корень репозитория (../db/schema.ts нужен обоим).
+# Без этого файла Docker пересылает daemon'у ВЕСЬ репозиторий на каждый build,
+# включая node_modules всех пакетов, .git, .next кэши — сотни МБ-гигабайты
+# при каждой пересборке, даже если реально нужны только db/ + web/ (или
+# diva-admin/) исходники. См. DEPLOY-BLOCKERS.md, блокер 4 (примечание).
+
+# Зависимости — переустанавливаются в образе через npm install
+**/node_modules
+
+# Build-кэши и артефакты Next.js — пересобираются внутри образа
+**/.next
+**/.turbo
+**/out
+**/dist
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# Git — не нужен внутри образа
+.git
+.gitignore
+**/.gitignore
+
+# Секреты — никогда не должны попадать в build context/слои образа
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Локальные артефакты/мусор, не отслеживаемые в git (см. корень репо на диске
+# разработчика: admin/, cms/ — остатки старого прототипа/Strapi, не в git)
+admin/
+cms/
+ops/backups/
+ops/report/
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Документация и служебные файлы — не нужны в образе приложения
+docs/
+*.md
+
+# Тесты и покрытие
+coverage/
+.nyc_output/
+**/*.test.ts
+**/*.test.tsx
