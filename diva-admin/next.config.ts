@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Монорепо: diva-admin импортирует общую схему ../db/schema.ts (alias @db/*).
+  // Без outputFileTracingRoot Next трассит зависимости только внутри diva-admin/,
+  // и standalone-бандл не включит ../db/schema.ts → MODULE_NOT_FOUND на @db/schema
+  // в runtime. Указываем корень репо, чтобы tracer уходил выше каталога приложения.
+  outputFileTracingRoot: path.join(__dirname, ".."),
   images: {
     unoptimized: true,
   },

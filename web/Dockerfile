@@ -30,6 +30,13 @@ COPY web ./web
 COPY --from=deps /app/web/node_modules ./web/node_modules
 WORKDIR /app/web
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* инлайнятся в бандл при сборке (не читаются из runtime env).
+# web/src/lib/cms.ts использует NEXT_PUBLIC_SITE_URL как API_BASE для SSR-fetch
+# к собственным роутам /api/content/* — без абсолютного URL Node fetch падает,
+# и сайт рендерится с пустыми секциями. Значение по умолчанию — заглушка для
+# локальной сборки; на VPS переопределяется через --build-arg.
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 RUN npm run build
 
 # ---------- runner ----------
