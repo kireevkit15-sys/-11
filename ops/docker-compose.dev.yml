@@ -46,6 +46,7 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      INTERNAL_API_BASE: http://127.0.0.1:3000
     # Host-port 3000 занят процессом com.docker.backend (PID 23096) на
     # Windows-хосте — bind-mount в Docker Desktop. Проксируем через
     # хост-порт 3010 → container 3000. Пользователь открывает
