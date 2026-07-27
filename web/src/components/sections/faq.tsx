@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { CaretDown } from '@phosphor-icons/react'
@@ -8,170 +8,33 @@ import { CaretDown } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
-import { getFaqs } from '@/lib/cms'
-import type { Faq } from '@/db/schema'
 
 // ---------------------------------------------------------------------------
-// Data
-// Ответы построены строго на фактах с сайта-референса (accounting-diva3d.ru):
-// — система налогообложения, программы ФСИ, оплата со 2-го этапа гранта,
-// — 5-этапный процесс, поддержка 12/6, 780 клиентов в 8 ФО, 5 лет специализации
-// и существующих данных проекта (тарифы из services.tsx). Без выдумок.
+// Типы: группы приходят снаружи (из RSC), а не из client fetch
 // ---------------------------------------------------------------------------
 
-type QA = { q: string; a: string }
-type FaqGroup = {
+export type FaqGroup = {
   num: string
   id: string
   label: string
-  questions: QA[]
+  questions: { q: string; a: string }[]
 }
-
-// ---------------------------------------------------------------------------
-// Конвертация данных из CMS в формат компонента
-// ---------------------------------------------------------------------------
-const CMS_CATEGORY_ORDER = ['Цены и оплата', 'ФСИ', 'Бухгалтерия', 'О компании'] as const
-
-const CMS_CATEGORY_LABELS: Record<typeof CMS_CATEGORY_ORDER[number], string> = {
-  'Цены и оплата': 'Тарифы и оплата',
-  'ФСИ': 'Гранты ФСИ',
-  'Бухгалтерия': 'Процесс работы',
-  'О компании': 'Гарантии и данные',
-}
-
-function convertCmsFaqs(faqs: Faq[]): FaqGroup[] {
-  // Strapi v5: данные приходят напрямую без .attributes
-  const categories: Record<string, QA[]> = {}
-
-  faqs.forEach((faq) => {
-    const cat = faq.category || 'О компании'
-    if (!categories[cat]) categories[cat] = []
-    categories[cat].push({
-      q: faq.question,
-      a: faq.answer,
-    })
-  })
-
-  // Формируем группы в нужном порядке
-  return CMS_CATEGORY_ORDER.map((cat, i) => ({
-    num: String(i + 1).padStart(2, '0'),
-    id: cat.toLowerCase().replace(/\s+/g, '-'),
-    label: CMS_CATEGORY_LABELS[cat] || cat,
-    questions: categories[cat] || [],
-  })).filter(group => group.questions.length > 0)
-}
-
-// ---------------------------------------------------------------------------
-// Данные (fallback при недоступности CMS)
-// ---------------------------------------------------------------------------
-const FALLBACK_FAQ_GROUPS: FaqGroup[] = [
-  {
-    num: '01',
-    id: 'pricing',
-    label: 'Тарифы и оплата',
-    questions: [
-      {
-        q: 'Сколько стоит обслуживание?',
-        a: 'Зависит от системы налогообложения: АУСН — 5 900 ₽/мес, УСН — 7 900 ₽/мес, ОСН — 8 900 ₽/мес. Сопровождение отчётности по «Студенческому стартапу» или «Старт 1» — 35 000 ₽ за весь грант. Полный состав работ — в блоке «Наши услуги» выше.',
-      },
-      {
-        q: 'Как формируется конечная стоимость?',
-        a: 'Тарифы фиксированные — цена зависит только от системы налогообложения и наличия сопровождения ФСИ. Скрытых надбавок нет, состав работ открыт, всё фиксируется в договоре.',
-      },
-      {
-        q: 'Можно ли поменять тариф позже?',
-        a: 'Да. Если бизнес растёт и АУСН становится тесно — переводим на УСН или ОСН вместе с переходным периодом. Если, наоборот, обороты упали — опускаемся на упрощённый режим. Перевод оформляется одним обращением.',
-      },
-    ],
-  },
-  {
-    num: '02',
-    id: 'fsi',
-    label: 'Гранты ФСИ',
-    questions: [
-      {
-        q: 'Какие программы ФСИ вы сопровождаете?',
-        a: 'Основные программы Фонда содействия инновациям: «Студенческий стартап», «Старт-1», ЦТ, ИИ, СТ. Стоимость сопровождения — 35 000 ₽ за весь грант. Эксперты компании сами были победителями конкурсов ФСИ — знаем процесс изнутри, не по методичкам.',
-      },
-      {
-        q: 'Когда начинается оплата при работе с грантом?',
-        a: 'Оплата стартует со 2-го этапа гранта. На первом этапе деньги нужны на разработку, а не на бухгалтерию. Первый этап — финансовый и промежуточный технический отчёт — сопровождаем до получения транша на 2-й этап.',
-      },
-      {
-        q: 'Что если ФСИ не принял отчёт?',
-        a: 'Дорабатываем замечания кураторов до полного принятия — это входит в стоимость. За 5 лет работы мы сопроводили 780 стартапов: типичные замечания знаем заранее и стараемся их не допускать.',
-      },
-    ],
-  },
-  {
-    num: '03',
-    id: 'process',
-    label: 'Процесс работы',
-    questions: [
-      {
-        q: 'С чего начинается сотрудничество?',
-        a: 'Бесплатная консультация — разбираем вашу ситуацию, систему налогообложения, этап гранта. Два формата: если есть конкретные вопросы — эксперт разбирает их и даёт прикладные материалы; если вопросов нет — проводим презентацию всего пути на год. После — подписываем договор и принимаем дела.',
-      },
-      {
-        q: 'Кто будет моим бухгалтером?',
-        a: 'Закреплённый личный бухгалтер из команды, не «отдел сопровождения». В команде 12 специалистов: бухгалтеры с опытом от 3 до 26 лет и консультанты по программам ФСИ с профильным опытом от 3 лет. Все эксперты имеют прикладной опыт работы с ФСИ.',
-      },
-      {
-        q: 'Как с вами связываться?',
-        a: 'Телефон +7 996 636-69-71 (Пн–СБ 08:00–18:00 МСК), email diva.consulting.b@gmail.com, Telegram @diva_accounting. Срочные вопросы по дедлайнам ФСИ — в приоритете.',
-      },
-    ],
-  },
-  {
-    num: '04',
-    id: 'guarantees',
-    label: 'Гарантии и данные',
-    questions: [
-      {
-        q: 'Как защищены мои данные?',
-        a: 'Работаем по 152-ФЗ «О персональных данных». Документы передаются через защищённый электронный документооборот, доступ к данным компании имеет только закреплённый за вами бухгалтер.',
-      },
-      {
-        q: 'Гарантия по сданным отчётам ФСИ',
-        a: 'Отчёт сопровождается до момента полного принятия экспертизой Фонда. Если куратор возвращает с замечаниями — дорабатываем без доплат. Это часть тарифа, а не extra-услуга.',
-      },
-      {
-        q: 'Что если я уйду через месяц?',
-        a: 'Договор расторгается одним обращением — без штрафов и удержаний. Передаём все данные, акты и доступы для следующего бухгалтера.',
-      },
-    ],
-  },
-]
 
 // ---------------------------------------------------------------------------
 // Section
+// Данные приходят из RSC (page.tsx) через props — без client fetch и без
+// fallback в коде. Если групп нет — секция просто не рисуется.
 // ---------------------------------------------------------------------------
 
-export function FaqSection() {
+export function FaqSection({ groups }: { groups: FaqGroup[] }) {
   const reduced = useReducedMotion()
-  const [faqGroups, setFaqGroups] = useState<FaqGroup[]>(FALLBACK_FAQ_GROUPS)
-  const [activeGroupId, setActiveGroupId] = useState<string>(FALLBACK_FAQ_GROUPS[0]?.id ?? '')
+  const [activeGroupId, setActiveGroupId] = useState<string>(groups[0]?.id ?? '')
   const [openIdx, setOpenIdx] = useState<number>(0)
-  const [isLoaded, setIsLoaded] = useState(false)
 
-  // Загрузка данных из CMS
-  useEffect(() => {
-    async function loadFaqs() {
-      const faqs = await getFaqs()
-      if (faqs.length > 0) {
-        const groups = convertCmsFaqs(faqs)
-        if (groups.length > 0) {
-          setFaqGroups(groups)
-          setActiveGroupId(groups[0]?.id ?? '')
-          setIsLoaded(true)
-        }
-      }
-    }
-    loadFaqs()
-  }, [])
+  if (groups.length === 0) return null
 
-  // faqGroups гарантированно непустой (FALLBACK_FAQ_GROUPS)
-  const activeGroup: FaqGroup = faqGroups.find((g) => g.id === activeGroupId) ?? faqGroups[0]!
+  // groups гарантированно непустой (return null выше)
+  const activeGroup: FaqGroup = groups.find((g) => g.id === activeGroupId) ?? groups[0]!
 
   const handleGroupChange = (id: string) => {
     setActiveGroupId(id)
@@ -284,7 +147,7 @@ export function FaqSection() {
           <aside className="lg:col-span-4">
             {/* Mobile: горизонтальные chips */}
             <div className="scrollbar-hide -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:hidden">
-              {faqGroups.map((g) => {
+              {groups.map((g) => {
                 const isActive = activeGroupId === g.id
                 return (
                   <button
@@ -306,7 +169,7 @@ export function FaqSection() {
 
             {/* Desktop: editorial вертикальный навигатор */}
             <div className="sticky top-24 hidden flex-col gap-1 lg:flex">
-              {faqGroups.map((g) => {
+              {groups.map((g) => {
                 const isActive = activeGroupId === g.id
                 return (
                   <button
@@ -438,7 +301,7 @@ function FaqItem({
   isOpen,
   onToggle,
 }: {
-  qa: QA
+  qa: { q: string; a: string }
   index: number
   total: number
   isOpen: boolean

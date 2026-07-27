@@ -14,9 +14,40 @@
  */
 
 import { cache } from 'react';
-import { desc } from 'drizzle-orm';
+import { asc, desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { teamMembers } from '@/db/schema';
+import { teamMembers, faqs } from '@/db/schema';
+
+export type ServerFaq = {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  sortOrder: number;
+};
+
+/**
+ * Загружает FAQ из БД для RSC. Кешируется в рамках одного запроса через React.cache.
+ * Сортировка: по sortOrder, чтобы порядок, заданный в админке, сохранялся.
+ */
+export const getServerFaqs = cache(async (): Promise<ServerFaq[]> => {
+  try {
+    const rows = await db
+      .select({
+        id: faqs.id,
+        question: faqs.question,
+        answer: faqs.answer,
+        category: faqs.category,
+        sortOrder: faqs.sortOrder,
+      })
+      .from(faqs)
+      .orderBy(asc(faqs.sortOrder));
+    return rows;
+  } catch (err) {
+    console.error('[serverCms] getServerFaqs failed', err);
+    return [];
+  }
+});
 
 export type ServerTeamMember = {
   id: string;
