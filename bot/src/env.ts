@@ -5,6 +5,10 @@ const envSchema = z.object({
   BOT_TOKEN: z.string().min(1, 'BOT_TOKEN is required'),
   ROP_CHAT_ID: z.string().min(1, 'ROP_CHAT_ID is required'),
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
+  // Whitelist Telegram user id, через запятую. Если пусто — бот
+  // отвечает всем (только для локальной отладки). В проде ОБЯЗАТЕЛЬНО
+  // задавать. См. DEPLOY-BLOCKERS (4).md, замечание 9.
+  BOT_ALLOWED_USER_IDS: z.string().default(''),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });

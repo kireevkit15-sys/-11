@@ -1,48 +1,57 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { pgTable, uuid, text, jsonb, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 import { env } from './env.js';
-import type { LeadStatus } from './types.js';
+import { leads, leadNotes, reminders, clients } from './schema.js';
 
-export const leads = pgTable('leads', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  name: text('name').notNull(),
-  contact: text('contact').notNull(),
-  source: text('source'),
-  page: text('page'),
-  utm: jsonb('utm').$type<Record<string, string> | null>(),
-  status: text('status').$type<LeadStatus>().notNull().default('new'),
-  interactionAt: timestamp('interaction_at', { withTimezone: true }),
-  notified: boolean('notified').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const leadNotes = pgTable('lead_notes', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  leadId: uuid('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
-  text: text('text').notNull(),
-  author: text('author').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const reminders = pgTable('reminders', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  leadId: uuid('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
-  chatId: text('chat_id').notNull(),
-  messageId: integer('message_id').notNull(),
-  fireAt: timestamp('fire_at', { withTimezone: true }).notNull(),
-  sent: boolean('sent').notNull().default(false),
-});
-
-export const clients = pgTable('clients', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  leadId: uuid('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
-  tags: jsonb('tags').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-  notes: text('notes').notNull().default(''),
-  nextContactAt: timestamp('next_contact_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-const client = postgres(env.DATABASE_URL, { max: 5 });
+// connect_timeout: 10 — без него, если postgres не отвечает (БД лежит,
+// firewall блокирует), висим бесконечно. 10с даёт шанс упасть в retry-loop
+// pollNewLeads, который через bumpBackoff() сделает следующую попытку через
+// 60с. (M6)
+const client = postgres(env.DATABASE_URL, { max: 5, idle_timeout: 30, connect_timeout: 10 });
 export const db = drizzle(client, { schema: { leads, leadNotes, reminders, clients } });
+
+// Re-export для обратной совместимости с другими модулями бота.
+export { leads, leadNotes, reminders, clients };
+
+/**
+ * Graceful shutdown: закрыть соединения postgres перед выходом.
+ * Без этого после SIGTERM в логе остаются "connection terminated" от postgres
+ * и теряются in-flight запросы.
+ *
+ * `onSignal` — опциональный колбэк остановки внешних ресурсов (например,
+ * grammY bot). Вызывается ДО закрытия postgres, чтобы бот успел
+ * завершить текущий update. Если колбэк бросит — ловим и идём дальше.
+ *
+ * Регистрирует обработчики SIGINT/SIGTERM ОДИН раз за процесс. Раньше
+ * параллельно дублировались в index.ts — process.once позволял обоим
+ * сработать, что приводило к двойному bot.stop() + двойному exit().
+ */
+let shutdownHandlerInstalled = false;
+export function installShutdown(onSignal?: () => Promise<unknown> | unknown): void {
+  if (shutdownHandlerInstalled) return;
+  shutdownHandlerInstalled = true;
+  const close = async (signal: NodeJS.Signals) => {
+    console.log(`[db] received ${signal}, stopping bot and closing postgres pool`);
+    if (onSignal) {
+      try {
+        await Promise.race([
+          Promise.resolve(onSignal()),
+          new Promise((r) => setTimeout(r, 5_000)),
+        ]);
+      } catch (err) {
+        console.error('[db] shutdown onSignal error', err);
+      }
+    }
+    try {
+      await client.end({ timeout: 5 });
+    } catch (err) {
+      console.error('[db] shutdown error', err);
+    }
+  };
+  process.once('SIGINT', () => {
+    void close('SIGINT').then(() => process.exit(0));
+  });
+  process.once('SIGTERM', () => {
+    void close('SIGTERM').then(() => process.exit(0));
+  });
+}

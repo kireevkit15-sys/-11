@@ -1,7 +1,28 @@
 import type { Lead, LeadNote } from './types.js';
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Full HTML escape: & < > " '. Telegram в parse_mode=HTML парсит и атрибуты,
+  // и контент. Без escape ' / " пользовательский ввод мог бы сломать форматирование
+  // (например, имя `O'Brien` или контакт `tex<strong>t</strong>`).
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Жёсткий лимит на длину пользовательского ввода — Telegram отправляет
+// текст до 4096 символов, но мы не хотим рендерить 4000 символов в один alert.
+const MAX_USER_TEXT_LEN = 500;
+function safeUserText(value: string): string {
+  // Итерируемся по code points (Array.from), чтобы slice не разорвал
+  // суррогатную пару эмодзи или символ кириллицы/китайского посередине.
+  // Старый код: value.slice(0, 500) — UTF-16 кодовые единицы, мог отрезать
+  // половину суррогата → битый символ в чате. (M5)
+  const chars = Array.from(value);
+  if (chars.length <= MAX_USER_TEXT_LEN) return value;
+  return chars.slice(0, MAX_USER_TEXT_LEN).join('') + '…';
 }
 
 function formatMoscowTime(date: Date): string {
@@ -46,8 +67,8 @@ export function formatLeadCard(lead: Lead): string {
 
   const lines = [
     '🔔 <b>Новая заявка</b>',
-    `<b>Имя:</b> ${escapeHtml(lead.name)}`,
-    `<b>Контакт:</b> ${escapeHtml(lead.contact)}`,
+    `<b>Имя:</b> ${escapeHtml(safeUserText(lead.name))}`,
+    `<b>Контакт:</b> ${escapeHtml(safeUserText(lead.contact))}`,
     `<b>Удобное время:</b> ${escapeHtml(timeLabel)}`,
     `<b>Источник:</b> ${escapeHtml(lead.source ?? '—')}`,
     `<b>Время заявки:</b> ${escapeHtml(formatMoscowTime(lead.createdAt))}`,
@@ -61,7 +82,11 @@ export function withStatusFooter(
   actor?: string,
   interactionAt?: Date | null,
 ): string {
-  const label = STATUS_LABELS[status];
+  // diva-admin пишет в БД статусы из расширенного списка (включая 'lost'),
+  // а Lead['status'] их не покрывает. Если лид в этом "чужом" статусе
+  // попадает в бота (например, через cron-reminder), STATUS_LABELS[status]
+  // даст undefined → escapeHtml упадёт. Fallback на сырой статус. (M7)
+  const label = STATUS_LABELS[status] ?? status;
   const by = actor ? ` (@${escapeHtml(actor)})` : '';
   let footer = `\n\n<b>Статус:</b> ${escapeHtml(label)}${by}`;
   if (status === 'interaction_scheduled' && interactionAt) {
@@ -73,7 +98,7 @@ export function withStatusFooter(
 export function withNotesFooter(card: string, notes: LeadNote[]): string {
   if (notes.length === 0) return card;
   const notesText = notes
-    .map((n) => `• ${escapeHtml(n.text)} <i>(@${escapeHtml(n.author)})</i>`)
+    .map((n) => `• ${escapeHtml(safeUserText(n.text))} <i>(@${escapeHtml(n.author)})</i>`)
     .join('\n');
   return `${card}\n\n<b>Заметки:</b>\n${notesText}`;
 }
