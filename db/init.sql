@@ -109,12 +109,70 @@ CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id
 CREATE INDEX IF NOT EXISTS idx_reminders_fire_at
     ON reminders (fire_at)
     WHERE sent = false;
+CREATE INDEX IF NOT EXISTS idx_reminders_lead_id
+    ON reminders (lead_id);
 CREATE INDEX IF NOT EXISTS idx_clients_lead_id
+    ON clients (lead_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_lead_id_unique
     ON clients (lead_id);
 CREATE INDEX IF NOT EXISTS idx_subscribers_email
     ON subscribers (email);
 CREATE INDEX IF NOT EXISTS idx_calculator_logs_created_at
     ON calculator_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_calculator_logs_lead_id
+    ON calculator_logs (lead_id);
+
+-- Constraint: subscribers должна содержать email или telegram_username.
+ALTER TABLE subscribers
+    DROP CONSTRAINT IF EXISTS subscribers_at_least_one_chk;
+ALTER TABLE subscribers
+    ADD CONSTRAINT subscribers_at_least_one_chk
+    CHECK (email IS NOT NULL OR telegram_username IS NOT NULL);
+
+-- Email приводится к lowercase на уровне БД — это исключает дубликаты
+-- вида Foo@bar.com vs foo@bar.com при сравнении text.
+CREATE OR REPLACE FUNCTION normalize_subscriber_email()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.email IS NOT NULL THEN
+        NEW.email = lower(NEW.email);
+    END IF;
+    IF NEW.telegram_username IS NOT NULL THEN
+        NEW.telegram_username = lower(NEW.telegram_username);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS subscribers_normalize ON subscribers;
+CREATE TRIGGER subscribers_normalize
+    BEFORE INSERT OR UPDATE ON subscribers
+    FOR EACH ROW EXECUTE FUNCTION normalize_subscriber_email();
+
+-- Constraint: reviews.rating в диапазоне 1..5.
+ALTER TABLE reviews
+    DROP CONSTRAINT IF EXISTS reviews_rating_range_chk;
+ALTER TABLE reviews
+    ADD CONSTRAINT reviews_rating_range_chk
+    CHECK (rating BETWEEN 1 AND 5);
+
+-- Constraint: leads.status — enum.
+ALTER TABLE leads
+    DROP CONSTRAINT IF EXISTS leads_status_chk;
+ALTER TABLE leads
+    ADD CONSTRAINT leads_status_chk
+    CHECK (status IN ('new','in_progress','interaction_scheduled','spam','converted','lost'));
+
+-- Constraint: audit_logs payload не больше 64KB.
+ALTER TABLE audit_logs
+    DROP CONSTRAINT IF EXISTS audit_logs_payload_size_chk;
+ALTER TABLE audit_logs
+    ADD CONSTRAINT audit_logs_payload_size_chk
+    CHECK (payload IS NULL OR octet_length(payload::text) < 65536);
+
+-- Index для поиска по audit_logs.entity_id
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_id
+    ON audit_logs (entity_id);
 
 -- =====================================================================
 -- Функция и триггер: автоматическое обновление leads.updated_at
@@ -142,10 +200,76 @@ CREATE TABLE IF NOT EXISTS admin_users (
     password_hash   text        NOT NULL,
     name            text        NOT NULL,
     role            text        NOT NULL DEFAULT 'editor',
-    created_at      timestamptz NOT NULL DEFAULT now()
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    require_password_change boolean NOT NULL DEFAULT true,
+    session_epoch   integer     NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users (email);
+
+DROP TRIGGER IF EXISTS admin_users_set_updated_at ON admin_users;
+CREATE TRIGGER admin_users_set_updated_at
+    BEFORE UPDATE ON admin_users
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
+-- Guard-функция: запретить понижение единственного админа.
+CREATE OR REPLACE FUNCTION guard_last_admin()
+RETURNS TRIGGER AS $$
+DECLARE
+    admin_count int;
+BEGIN
+    IF OLD.role = 'admin' AND (NEW.role IS DISTINCT FROM 'admin') THEN
+        SELECT count(*) INTO admin_count
+        FROM admin_users
+        WHERE role = 'admin' AND id <> OLD.id;
+        IF admin_count = 0 THEN
+            RAISE EXCEPTION 'Cannot demote the last admin';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS admin_users_guard_last_admin ON admin_users;
+CREATE TRIGGER admin_users_guard_last_admin
+    BEFORE UPDATE ON admin_users
+    FOR EACH ROW
+    EXECUTE FUNCTION guard_last_admin();
+
+-- =====================================================================
+-- login_attempts — счётчик неудачных попыток входа (rate-limit)
+--
+-- Схема: одна строка на ключ (email|ip). Счётчик failure_count
+-- инкрементируется атомарно через UPSERT, окно — first_failure_at.
+-- blocked_until выставляется при превышении MAX_FAILURES.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS login_attempts (
+    key              text         PRIMARY KEY,
+    failure_count    integer      NOT NULL DEFAULT 0,
+    first_failure_at timestamptz  NOT NULL DEFAULT now(),
+    blocked_until    timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_blocked_until
+  ON login_attempts (blocked_until) WHERE blocked_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_login_attempts_first_failure_at
+  ON login_attempts (first_failure_at);
+
+-- Автоматическая очистка устаревших записей.
+CREATE OR REPLACE FUNCTION cleanup_login_attempts()
+RETURNS integer AS $$
+DECLARE
+    deleted_count integer;
+BEGIN
+    DELETE FROM login_attempts
+    WHERE first_failure_at < now() - INTERVAL '1 hour'
+      AND (blocked_until IS NULL OR blocked_until < now());
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
 
 -- =====================================================================
 -- services — бухгалтерские услуги
@@ -442,7 +566,7 @@ CREATE TABLE IF NOT EXISTS partners (
     role            text        NOT NULL,
     company         text,
     bio             text,
-    photo_url       text,
+    logo_url        text,        -- логотип партнёра (компании). Раньше было photo_url — путало с фото людей.
     skills          jsonb       NOT NULL DEFAULT '[]'::jsonb,
     github_link     text,
     portfolio_link  text,
@@ -489,3 +613,185 @@ CREATE TRIGGER fsi_deadlines_set_updated_at BEFORE UPDATE ON fsi_deadlines FOR E
 CREATE TRIGGER glossary_terms_set_updated_at BEFORE UPDATE ON glossary_terms FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER announcements_set_updated_at BEFORE UPDATE ON announcements FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER partners_set_updated_at BEFORE UPDATE ON partners FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- audit_logs — журнал действий админов (создан через init, не только через миграции)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     uuid        REFERENCES admin_users(id) ON DELETE SET NULL,
+    action      text        NOT NULL,
+    entity      text        NOT NULL,
+    entity_id   text,
+    payload     jsonb,
+    ip          text,
+    user_agent  text,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs (entity);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_id ON audit_logs (entity_id);
+
+-- =====================================================================
+-- frontend_sections — управляемые секции фронтенда
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS frontend_sections (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    key         text        NOT NULL UNIQUE,
+    name        text        NOT NULL,
+    description text,
+    page        text        NOT NULL DEFAULT 'home',
+    is_enabled  boolean     NOT NULL DEFAULT true,
+    sort_order  integer     NOT NULL DEFAULT 0,
+    config      jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    updated_by  uuid        REFERENCES admin_users(id) ON DELETE SET NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_sections_page ON frontend_sections (page);
+CREATE INDEX IF NOT EXISTS idx_frontend_sections_sort_order ON frontend_sections (sort_order);
+
+DROP TRIGGER IF EXISTS frontend_sections_set_updated_at ON frontend_sections;
+CREATE TRIGGER frontend_sections_set_updated_at
+    BEFORE UPDATE ON frontend_sections
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- site_settings — глобальные настройки сайта
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS site_settings (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    key         text        NOT NULL UNIQUE,
+    value       jsonb       NOT NULL,
+    description text,
+    updated_by  uuid        REFERENCES admin_users(id) ON DELETE SET NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+DROP TRIGGER IF EXISTS site_settings_set_updated_at ON site_settings;
+CREATE TRIGGER site_settings_set_updated_at
+    BEFORE UPDATE ON site_settings
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- page_versions — версии страниц с автоинкрементом version
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS page_versions (
+    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    page_key     text        NOT NULL,
+    version      integer     NOT NULL,
+    config       jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    is_published boolean     NOT NULL DEFAULT false,
+    published_at timestamptz,
+    created_by   uuid        REFERENCES admin_users(id) ON DELETE SET NULL,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (page_key, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_page_versions_page_key ON page_versions (page_key);
+CREATE INDEX IF NOT EXISTS idx_page_versions_version ON page_versions (version);
+CREATE INDEX IF NOT EXISTS idx_page_versions_is_published ON page_versions (is_published);
+
+-- Триггер: автоинкремент version для конкретной страницы.
+CREATE OR REPLACE FUNCTION set_next_version()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.version IS NULL OR NEW.version = 0 THEN
+        SELECT COALESCE(MAX(version), 0) + 1 INTO NEW.version
+        FROM page_versions WHERE page_key = NEW.page_key;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS page_versions_set_version ON page_versions;
+CREATE TRIGGER page_versions_set_version
+    BEFORE INSERT ON page_versions
+    FOR EACH ROW EXECUTE FUNCTION set_next_version();
+
+-- Триггер: гарантирует ровно одну опубликованную версию на страницу.
+CREATE OR REPLACE FUNCTION ensure_one_published_version()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_published = true THEN
+        UPDATE page_versions
+        SET is_published = false
+        WHERE page_key = NEW.page_key AND id <> NEW.id AND is_published = true;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS page_versions_ensure_one_published ON page_versions;
+CREATE TRIGGER page_versions_ensure_one_published
+    AFTER INSERT OR UPDATE OF is_published ON page_versions
+    FOR EACH ROW EXECUTE FUNCTION ensure_one_published_version();
+
+-- =====================================================================
+-- hero_configs / footer_configs / announcement_messages (singletons, serial PK)
+--
+-- Структура отражает db/schema.ts (Drizzle) и используется в CMS UI дива-админки.
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS hero_configs (
+    id           serial      PRIMARY KEY,
+    key          varchar(50) DEFAULT 'main',
+    headline     text,
+    subheadline  text,
+    cta_text     varchar(100),
+    badges       jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    stat_number  varchar(50),
+    stat_label   varchar(100),
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    updated_at   timestamptz NOT NULL DEFAULT now()
+);
+
+DROP TRIGGER IF EXISTS hero_configs_set_updated_at ON hero_configs;
+CREATE TRIGGER hero_configs_set_updated_at
+    BEFORE UPDATE ON hero_configs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE IF NOT EXISTS footer_configs (
+    id            serial      PRIMARY KEY,
+    key           varchar(50) DEFAULT 'main',
+    email         varchar(255),
+    phones        jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    address       text,
+    legal_info    text,
+    work_hours    varchar(100),
+    nav_columns   jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    social_links  jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    copyright     varchar(255),
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+DROP TRIGGER IF EXISTS footer_configs_set_updated_at ON footer_configs;
+CREATE TRIGGER footer_configs_set_updated_at
+    BEFORE UPDATE ON footer_configs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE IF NOT EXISTS announcement_messages (
+    id            serial      PRIMARY KEY,
+    key           varchar(50),
+    message       text,
+    cta_text      varchar(100),
+    href          varchar(255),
+    badge         varchar(50),
+    hue           integer     DEFAULT 200,
+    available     boolean     DEFAULT true,
+    sort_order    integer     DEFAULT 0,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+DROP TRIGGER IF EXISTS announcement_messages_set_updated_at ON announcement_messages;
+CREATE TRIGGER announcement_messages_set_updated_at
+    BEFORE UPDATE ON announcement_messages FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- login_attempts cleanup (cron-like). Реальный cron — внешний (pg_cron / systemd timer).
+-- =====================================================================
+-- Заглушка: cleanup_login_attempts() уже создан выше; используется через psql/cron.

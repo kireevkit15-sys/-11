@@ -179,6 +179,7 @@ export const adminUsers = pgTable(
     name: text('name').notNull(),
     role: text('role').notNull().default('editor'),
     requirePasswordChange: boolean('require_password_change').notNull().default(true),
+    sessionEpoch: integer('session_epoch').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -190,6 +191,18 @@ export const adminUsers = pgTable(
     emailIdx: index('idx_admin_users_email').on(t.email),
   }),
 );
+
+// =====================================================================
+// login_attempts — счётчик неудачных попыток входа (persistent rate-limit)
+// =====================================================================
+// Схема совпадает с db/init.sql: одна строка на ключ, UPSERT-инкремент
+// failure_count, окно отслеживается через first_failure_at.
+export const loginAttempts = pgTable('login_attempts', {
+  key: text('key').primaryKey(),
+  failureCount: integer('failure_count').notNull().default(0),
+  firstFailureAt: timestamp('first_failure_at', { withTimezone: true }).notNull().defaultNow(),
+  blockedUntil: timestamp('blocked_until', { withTimezone: true }),
+});
 
 // =====================================================================
 // audit_logs — журнал изменений в админ-панели
@@ -688,6 +701,7 @@ export const announcements = pgTable(
     available: boolean('available').notNull().default(true),
     featured: boolean('featured').notNull().default(false),
     sortOrder: integer('sort_order').notNull().default(0),
+    imageUrl: text('image_url'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -753,8 +767,8 @@ export const heroConfigs = pgTable('hero_configs', {
   badges: jsonb('badges').$type<string[]>().default(sql`'[]'::jsonb`),
   statNumber: varchar('stat_number', { length: 50 }),
   statLabel: varchar('stat_label', { length: 100 }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // footer_configs — настройки утилити-футера
@@ -771,8 +785,8 @@ export const footerConfigs = pgTable('footer_configs', {
     .default(sql`'[]'::jsonb`),
   socialLinks: jsonb('social_links').$type<unknown[]>().default(sql`'[]'::jsonb`),
   copyright: varchar('copyright', { length: 255 }),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // announcement_messages — сообщения в полоске-объявлении над шапкой
@@ -786,8 +800,8 @@ export const announcementMessages = pgTable('announcement_messages', {
   hue: integer('hue').default(200),
   available: boolean('available').default(true),
   sortOrder: integer('sort_order').default(0),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // =====================================================================

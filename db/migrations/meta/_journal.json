@@ -8,6 +8,20 @@
       "when": 1781627322137,
       "tag": "0000_baseline_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781627322138,
+      "tag": "0002_check_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781627322139,
+      "tag": "0003_unify_leads_status_check",
+      "breakpoints": true
     }
   ]
 }
