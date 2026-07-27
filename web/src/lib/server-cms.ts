@@ -14,9 +14,9 @@
  */
 
 import { cache } from 'react';
-import { asc, desc } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { teamMembers, faqs } from '@/db/schema';
+import { teamMembers, faqs, partners } from '@/db/schema';
 
 export type ServerFaq = {
   id: string;
@@ -45,6 +45,68 @@ export const getServerFaqs = cache(async (): Promise<ServerFaq[]> => {
     return rows;
   } catch (err) {
     console.error('[serverCms] getServerFaqs failed', err);
+    return [];
+  }
+});
+
+export type ServerPartner = {
+  id: string;
+  name: string;
+  role: string;
+  company: string | null;
+  logoUrl: string | null;
+  bio: string | null;
+  skills: unknown;
+  githubLink: string | null;
+  portfolioLink: string | null;
+  vkLink: string | null;
+  telegramLink: string | null;
+  contact: string | null;
+  badge: string | null;
+  hue: number | null;
+  available: boolean;
+  featured: boolean | null;
+  category: string;
+  sortOrder: number;
+};
+
+/**
+ * Загружает доступных партнёров из БД для RSC.
+ * Кешируется в рамках одного запроса через React.cache.
+ *
+ * Применяем фильтр available=true: «серый»/архивный партнёр не должен
+ * показываться на публичном сайте. Сортировка по sortOrder — порядок
+ * задаётся в admin через drag-and-drop.
+ */
+export const getServerPartners = cache(async (): Promise<ServerPartner[]> => {
+  try {
+    const rows = await db
+      .select({
+        id: partners.id,
+        name: partners.name,
+        role: partners.role,
+        company: partners.company,
+        logoUrl: partners.logoUrl,
+        bio: partners.bio,
+        skills: partners.skills,
+        githubLink: partners.githubLink,
+        portfolioLink: partners.portfolioLink,
+        vkLink: partners.vkLink,
+        telegramLink: partners.telegramLink,
+        contact: partners.contact,
+        badge: partners.badge,
+        hue: partners.hue,
+        available: partners.available,
+        featured: partners.featured,
+        category: partners.category,
+        sortOrder: partners.sortOrder,
+      })
+      .from(partners)
+      .where(eq(partners.available, true))
+      .orderBy(asc(partners.sortOrder));
+    return rows;
+  } catch (err) {
+    console.error('[serverCms] getServerPartners failed', err);
     return [];
   }
 });

@@ -169,10 +169,58 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                 />
               )}
 
-              {item.id === 'syntax-labs' || item.name === 'Syntax Labs' ? (
-                /* ── SYNTAX LABS: full-width logo hero ── */
+              {/* Логотип партнёра. Приоритет: 1) загруженный logoUrl (админка),
+                  2) фирменный SVG для Syntax Labs (когда логотип не загружен),
+                  3) инициалы для остальных. Раньше тут был жёсткий branch по
+                  item.id === 'syntax-labs', который перекрывал любой upload —
+                  из-за этого логотип не отображался даже после загрузки. */}
+              {item.logoUrl ? (
                 <div className="relative z-10 flex flex-col items-center w-full gap-3">
-                  {/* Full logo: icon + SYNTAX LABS text */}
+                  <img
+                    src={item.logoUrl}
+                    alt={item.name}
+                    className="h-20 w-auto max-w-full object-contain"
+                    style={{
+                      filter: `drop-shadow(0 0 20px ${hsl}90) drop-shadow(0 0 40px ${hsl}50)`,
+                    }}
+                  />
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                    {item.badge === 'team' ? (
+                      <span className="relative overflow-hidden rounded-full bg-violet-600/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300 ring-1 ring-violet-500/35">
+                        {!reduced && (
+                          <motion.span className="pointer-events-none absolute inset-0 -skew-x-12"
+                            style={{ background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.45) 50%, transparent)' }}
+                            animate={{ x: ['-100%', '200%'] }}
+                            transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 3 }} />
+                        )}
+                        ✦ Команда ДИВА
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-white/[0.07] px-2.5 py-0.5 text-[9px] font-medium text-white/35 ring-1 ring-white/[0.08]">Клиент</span>
+                    )}
+                    {item.available && (
+                      <span className="flex items-center gap-1 rounded-full px-2.5 py-0.5"
+                        style={{ background: 'rgba(16,185,129,0.1)', boxShadow: '0 0 0 1px rgba(16,185,129,0.25)' }}>
+                        <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                          animate={reduced ? undefined : { opacity: [1, 0.3, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }} />
+                        <span className="font-mono text-[9px] font-semibold text-emerald-400">Доступен</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-mono text-[11px] tracking-wide text-center" style={{ color: `${hsl}cc` }}>{item.role}</p>
+                  <div className="flex items-center gap-1.5 rounded-full px-3 py-1"
+                    style={{ background: `${hsl}15`, boxShadow: `0 0 0 1px ${hsl}30` }}>
+                    <motion.span className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: hsl, boxShadow: `0 0 5px ${hsl}` }}
+                      animate={reduced ? undefined : { opacity: [1, 0.4, 1], scale: [1, 1.3, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }} />
+                    <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: hsl }}>{CATEGORY_LABEL[item.category]}</span>
+                  </div>
+                </div>
+              ) : item.id === 'syntax-labs' || item.name === 'Syntax Labs' ? (
+                /* ── SYNTAX LABS без logoUrl: фирменный SVG как дефолт ── */
+                <div className="relative z-10 flex flex-col items-center w-full gap-3">
                   <svg
                     viewBox="0 0 1241 633"
                     xmlns="http://www.w3.org/2000/svg"
@@ -198,7 +246,6 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                       <path d="M6592 2408 l3 -283 76 0 c50 0 82 5 92 14 15 12 17 45 17 282 l0 269 -95 0 -95 0 2 -282z"/>
                     </g>
                   </svg>
-                  {/* Badges */}
                   <div className="flex items-center gap-1.5 flex-wrap justify-center">
                     <span className="relative overflow-hidden rounded-full bg-violet-600/20 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300 ring-1 ring-violet-500/35">
                       {!reduced && (
