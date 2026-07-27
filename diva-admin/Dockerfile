@@ -28,6 +28,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOST=0.0.0.0
 ENV PORT=3001
+# Без HOSTNAME next/image и встроенный healthcheck биндятся на имя
+# контейнера, и healthcheck `wget http://localhost:3001/ → refused`.
+# См. DEPLOY-BLOCKERS (4).md, замечание 2.
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
