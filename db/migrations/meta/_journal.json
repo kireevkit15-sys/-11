@@ -10,6 +10,13 @@
       "breakpoints": true
     },
     {
+      "idx": 1,
+      "version": "7",
+      "when": 1781627322140,
+      "tag": "0001_fix_fsi_deadlines",
+      "breakpoints": true
+    },
+    {
       "idx": 2,
       "version": "7",
       "when": 1781627322138,
@@ -21,6 +28,13 @@
       "version": "7",
       "when": 1781627322139,
       "tag": "0003_unify_leads_status_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781627322141,
+      "tag": "0004_announcements_image",
       "breakpoints": true
     }
   ]
