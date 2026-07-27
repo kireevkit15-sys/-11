@@ -55,6 +55,10 @@ export interface FieldConfig {
   help?: string;
   /** Секция формы для группировки полей (напр. «Контакты»). */
   group?: string;
+  /** Значение, подставляемое в форму при создании новой записи (не при
+   *  редактировании — тогда берётся из БД). Используется в emptyValue().
+   *  Для checkbox: true/false; для list: [] (явно задавать не нужно). */
+  defaultValue?: boolean | string | number;
 }
 
 export interface ColumnConfig {
@@ -510,6 +514,10 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'bio', label: 'О себе', type: 'textarea', group: 'Основное' },
       { name: 'skills', label: 'Навыки', type: 'list', group: 'Основное' },
       { name: 'category', label: 'Категория', type: 'select', options: ['fullstack', 'mobile', 'ai', 'devops', 'design', 'other'], group: 'Основное' },
+      // available — вверху смысла нет, но дефолт true критичен: без него
+      // новый партнёр сохраняется скрытым (available=false) и не виден на
+      // сайте, что сбивает редакторов. Ставим галочку сразу включённой.
+      { name: 'available', label: 'Доступен (показывать на сайте)', type: 'checkbox', defaultValue: true, help: 'Если выключено — партнёр не появится в объявлениях', group: 'Основное' },
       { name: 'githubLink', label: 'GitHub', type: 'text', group: 'Контакты и ссылки' },
       { name: 'portfolioLink', label: 'Портфолио', type: 'text', group: 'Контакты и ссылки' },
       { name: 'vkLink', label: 'VK', type: 'text', group: 'Контакты и ссылки' },
@@ -517,7 +525,6 @@ export const ENTITIES: Record<string, EntityConfig> = {
       { name: 'contact', label: 'Контакт', type: 'text', placeholder: '@username', group: 'Контакты и ссылки' },
       { name: 'badge', label: 'Тип', type: 'select', options: ['team', 'client'], help: 'team — «Команда ДИВА», client — «Клиент»', group: 'Оформление' },
       { name: 'hue', label: 'Оттенок карточки (0–360)', type: 'number', help: 'Цвет свечения карточки на сайте', group: 'Оформление' },
-      { name: 'available', label: 'Доступен', type: 'checkbox', group: 'Оформление' },
       { name: 'featured', label: 'В топе', type: 'checkbox', group: 'Оформление' },
       { name: 'sortOrder', label: 'Порядок', type: 'number', group: 'Оформление' },
     ],

@@ -13,7 +13,14 @@ type FormState = Record<string, string | boolean | string[]>;
 
 function emptyValue(field: FieldConfig): string | boolean | string[] {
   if (field.type === 'list') return [];
-  if (field.type === 'checkbox') return false;
+  if (field.type === 'checkbox') {
+    // Для checkbox defaultValue имеет смысл только boolean.
+    if (field.defaultValue === true) return true;
+    return false;
+  }
+  if (field.defaultValue !== undefined && typeof field.defaultValue === 'string') {
+    return field.defaultValue;
+  }
   return '';
 }
 
