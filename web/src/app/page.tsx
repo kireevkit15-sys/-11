@@ -5,6 +5,7 @@ import { ServicesSection } from '@/components/sections/services'
 import { TeamCarousel } from '@/components/sections/team-carousel'
 import { CasesMarquee } from '@/components/sections/cases'
 import { TestimonialsSection } from '@/components/sections/testimonials'
+import { ContentSection } from '@/components/sections/content'
 import { FaqSection } from '@/components/sections/faq'
 import { Footer } from '@/components/sections/footer'
 import { getServerTeamMembers } from '@/lib/server-cms'
@@ -26,6 +27,7 @@ export default async function Home() {
         <TeamCarousel initialMembers={members} />
         <CasesMarquee />
         <TestimonialsSection />
+        <ContentSection />
         <FaqSection />
       </main>
       <Footer />
