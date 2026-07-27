@@ -81,7 +81,13 @@ export function EntityForm({ entity, id }: { entity: ClientEntity; id?: string }
     } finally {
       setIsFetching(false);
     }
-  }, [entity.slug, entity.fields, id]);
+  // ВАЖНО: зависимости — только id. entity.slug/entity.fields могут меняться
+  // при router.refresh() (новые ссылки на module-level массивы), но содержимое
+  // то же самое. Если включить их — useEffect будет перезапускать loadRecord
+  // после каждого refresh(), затирая локальные правки пользователя (например,
+  // только что загруженный логотип до нажатия «Сохранить»).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     loadRecord();
@@ -116,8 +122,18 @@ export function EntityForm({ entity, id }: { entity: ClientEntity; id?: string }
         throw new Error(data.error || 'Не удалось сохранить');
       }
       toast('success', isEdit ? 'Изменения сохранены' : 'Запись создана');
-      router.push(`/admin/${entity.slug}`);
-      router.refresh();
+
+      if (isEdit) {
+        // Остаёмся на форме — даём возможность править дальше без возврата в список.
+        // Сбрасываем isSubmitting и обновляем данные списка на фоне (router.refresh()),
+        // но не уходим с /admin/[entity]/[id].
+        setIsSubmitting(false);
+        router.refresh();
+      } else {
+        // Создание — редиректим на свежесозданную запись (id нужен с сервера, проще в список).
+        router.push(`/admin/${entity.slug}`);
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сервера');
       setIsSubmitting(false);
@@ -178,7 +194,7 @@ export function EntityForm({ entity, id }: { entity: ClientEntity; id?: string }
                   {grp.name}
                 </h3>
               )}
-              {grp.fields.map((field) => (
+              {grp.fields?.map((field) => (
             <div key={field.name}>
               {field.type !== 'checkbox' && (
                 <label className="block text-sm font-medium text-slate-700 mb-1.5 dark:text-slate-200">

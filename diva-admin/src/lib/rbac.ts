@@ -13,6 +13,8 @@ export type Permission =
   | 'content:read'
   | 'content:write'
   | 'content:delete'
+  | 'leads:read'    // список заявок CRM (PII). Editor/admin.
+  | 'leads:write'   // изменение статуса/заметок. Editor/admin.
   | 'users:read'
   | 'users:write'
   | 'users:delete'
@@ -24,11 +26,14 @@ export type Permission =
   | 'frontend:publish';
 
 const PERMISSIONS: Record<AdminRole, Permission[]> = {
+  // viewer — только контент сайта (без PII заявок).
   viewer: ['content:read', 'settings:read', 'frontend:read'],
   editor: [
     'content:read',
     'content:write',
     'content:delete',
+    'leads:read',
+    'leads:write',
     'settings:read',
     'frontend:read',
     'frontend:write',
@@ -37,6 +42,8 @@ const PERMISSIONS: Record<AdminRole, Permission[]> = {
     'content:read',
     'content:write',
     'content:delete',
+    'leads:read',
+    'leads:write',
     'users:read',
     'users:write',
     'users:delete',

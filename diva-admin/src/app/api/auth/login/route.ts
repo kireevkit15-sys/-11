@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+      const message = parsed.error.issues[0]?.message ?? 'Некорректные данные';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     const { email, password } = parsed.data;
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent');
     const rateKey = `${ip ?? 'noip'}:${email.toLowerCase()}`;
 
-    const rate = loginRateStatus(rateKey);
+    const rate = await loginRateStatus(rateKey);
     if (rate.blocked) {
       const mins = Math.ceil(rate.retryAfterSec / 60);
       return NextResponse.json(
@@ -43,12 +44,19 @@ export async function POST(request: NextRequest) {
     const user = await validateCredentials(email, password);
 
     if (!user) {
-      recordLoginFailure(rateKey);
+      const status = await recordLoginFailure(rateKey);
       await logAudit({ action: 'login_failed', entity: 'admin_users', ip, userAgent });
+      if (status.blocked) {
+        const mins = Math.ceil(status.retryAfterSec / 60);
+        return NextResponse.json(
+          { error: `Слишком много попыток. Попробуйте через ${mins} мин.` },
+          { status: 429, headers: { 'Retry-After': String(status.retryAfterSec) } },
+        );
+      }
       return NextResponse.json({ error: 'Неверный email или пароль' }, { status: 401 });
     }
 
-    clearLoginRate(rateKey);
+    await clearLoginRate(rateKey);
     await setSessionUser(user);
     await logAudit({
       userId: user.id,

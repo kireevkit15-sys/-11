@@ -10,8 +10,7 @@ import { eq, asc } from 'drizzle-orm';
 import { leads, leadNotes } from '@db/schema';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
-
-const ALLOWED_STATUSES = new Set(['new', 'in_progress', 'converted', 'lost', 'spam']);
+import { isLeadStatus, LEAD_STATUSES } from '@/app/admin/leads/status';
 
 export async function GET(
   _request: NextRequest,
@@ -19,7 +18,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const auth = await authorize('content:read');
+  const auth = await authorize('leads:read');
   if ('error' in auth) return auth.error;
 
   try {
@@ -44,17 +43,23 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  const auth = await authorize('content:write');
+  const auth = await authorize('leads:write');
   if ('error' in auth) return auth.error;
 
   try {
     const raw = (await request.json()) as Record<string, unknown>;
     const data: Record<string, unknown> = {};
+    let prevStatus: string | undefined;
 
     if (raw.status !== undefined) {
-      const status = String(raw.status);
-      if (!ALLOWED_STATUSES.has(status)) return jsonError('Недопустимый статус', 400);
-      data.status = status;
+      if (!isLeadStatus(raw.status)) {
+        return jsonError(
+          `Недопустимый статус. Допустимые: ${Object.keys(LEAD_STATUSES).join(', ')}`,
+          400,
+        );
+      }
+      prevStatus = raw.status;
+      data.status = raw.status;
     }
 
     if (raw.notes !== undefined) {
@@ -80,12 +85,17 @@ export async function PATCH(
     const [updated] = await db.update(leads).set(data).where(eq(leads.id, id)).returning();
     if (!updated) return jsonError('Заявка не найдена', 404);
 
+    const auditPayload: Record<string, unknown> = { fields: Object.keys(data) };
+    if (prevStatus !== undefined && prevStatus !== updated.status) {
+      auditPayload.status = { from: prevStatus, to: updated.status };
+    }
+
     await logAudit({
       userId: auth.user.id,
       action: 'update',
       entity: 'leads',
       entityId: id,
-      payload: { fields: Object.keys(data) },
+      payload: auditPayload,
       ip: clientIp(request),
       userAgent: request.headers.get('user-agent'),
     });

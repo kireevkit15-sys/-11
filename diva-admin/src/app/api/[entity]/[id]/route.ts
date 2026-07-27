@@ -8,15 +8,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { eq, sql, type SQL } from 'drizzle-orm';
-import { getEntity } from '@/lib/entities';
+import { getVisibleEntity, type EntityConfig } from '@/lib/entities';
 import { authorize, coerceBody, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
+import { revalidateFromEntity } from '@/lib/revalidate-web';
 
 /**
  * Сравнение id, устойчивое к типу колонки (uuid или integer-serial):
  * приводим колонку к тексту, чтобы сравнить со строковым параметром из URL.
  */
-function whereId(entity: ReturnType<typeof getEntity>, id: string): SQL {
+function whereId(entity: EntityConfig, id: string): SQL {
   const col = (entity!.table as unknown as Record<string, unknown>).id;
   return eq(sql`${col}::text`, id);
 }
@@ -26,7 +27,7 @@ export async function GET(
   { params }: { params: Promise<{ entity: string; id: string }> },
 ) {
   const { entity: slug, id } = await params;
-  const entity = getEntity(slug);
+  const entity = getVisibleEntity(slug);
   if (!entity) return jsonError('Неизвестная сущность', 404);
 
   const auth = await authorize('content:read');
@@ -46,7 +47,7 @@ export async function PUT(
   { params }: { params: Promise<{ entity: string; id: string }> },
 ) {
   const { entity: slug, id } = await params;
-  const entity = getEntity(slug);
+  const entity = getVisibleEntity(slug);
   if (!entity) return jsonError('Неизвестная сущность', 404);
 
   const auth = await authorize('content:write');
@@ -79,6 +80,8 @@ export async function PUT(
       userAgent: request.headers.get('user-agent'),
     });
 
+    revalidateFromEntity(slug);
+
     return NextResponse.json({ data: updated });
   } catch (error) {
     return dbErrorResponse(error);
@@ -90,7 +93,7 @@ export async function DELETE(
   { params }: { params: Promise<{ entity: string; id: string }> },
 ) {
   const { entity: slug, id } = await params;
-  const entity = getEntity(slug);
+  const entity = getVisibleEntity(slug);
   if (!entity) return jsonError('Неизвестная сущность', 404);
 
   const auth = await authorize('content:delete');
@@ -111,6 +114,8 @@ export async function DELETE(
       ip: clientIp(request),
       userAgent: request.headers.get('user-agent'),
     });
+
+    revalidateFromEntity(slug);
 
     return NextResponse.json({ success: true });
   } catch (error) {

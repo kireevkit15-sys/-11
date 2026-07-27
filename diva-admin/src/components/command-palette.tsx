@@ -63,7 +63,20 @@ export function CommandPalette({ items }: { items: CommandItem[] }) {
   // Глобальный хоткей открытия/закрытия
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Не перехватываем Ctrl+K из input/textarea — там это может мешать
+      // нативному поведению (браузер «open search», сторонние шорткаты).
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const inEditable =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        target?.isContentEditable;
+
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        // Разрешаем открывать палитру даже из input — это полезно и общепринято
+        // (Cmd+K открывает поиск в Slack, Linear, GitHub).
+        // Но если в поле уже идёт ввод — игнорируем, чтобы не сбивать пользователя.
+        if (target && inEditable && (query.length > 0 || open)) return;
         e.preventDefault();
         setOpen((v) => !v);
       } else if (e.key === 'Escape') {
@@ -72,7 +85,7 @@ export function CommandPalette({ items }: { items: CommandItem[] }) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [open, query]);
 
   // Сброс состояния при открытии
   useEffect(() => {

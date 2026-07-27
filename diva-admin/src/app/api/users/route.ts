@@ -26,16 +26,24 @@ const SAFE_COLUMNS = {
   createdAt: adminUsers.createdAt,
 } as const;
 
-export async function GET() {
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+
+export async function GET(request: NextRequest) {
   const auth = await authorize('users:read');
   if ('error' in auth) return auth.error;
 
   try {
+    const sp = request.nextUrl.searchParams;
+    const limit = Math.min(MAX_LIMIT, Math.max(1, Number(sp.get('limit') ?? DEFAULT_LIMIT)));
+    const offset = Math.max(0, Number(sp.get('offset') ?? 0));
     const rows = await db
       .select(SAFE_COLUMNS)
       .from(adminUsers)
-      .orderBy(desc(adminUsers.createdAt));
-    return NextResponse.json({ data: rows });
+      .orderBy(desc(adminUsers.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return NextResponse.json({ data: rows, pagination: { limit, offset } });
   } catch (error) {
     return dbErrorResponse(error);
   }
@@ -56,10 +64,12 @@ export async function POST(request: NextRequest) {
     if (!name) return jsonError('Поле «Имя» обязательно', 400);
     if (!ROLES.includes(role)) return jsonError('Недопустимая роль', 400);
 
-    const strength = validatePasswordStrength(password);
+    const strength = validatePasswordStrength(password, email);
     if (!strength.valid) return jsonError(strength.error ?? 'Слабый пароль', 400);
 
-    const passwordHash = await hashPassword(password);
+    // NFKC-нормализация перед хэшированием: одинаковые визуально пароли
+    // (например, fullwidth vs ascii) хэшируются в одну строку.
+    const passwordHash = await hashPassword(password.normalize('NFKC'));
 
     const [created] = await db
       .insert(adminUsers)
@@ -70,7 +80,7 @@ export async function POST(request: NextRequest) {
       userId: auth.user.id,
       action: 'create',
       entity: 'admin_users',
-      entityId: created.id,
+      entityId: created?.id ?? null,
       payload: { email, name, role },
       ip: clientIp(request),
       userAgent: request.headers.get('user-agent'),

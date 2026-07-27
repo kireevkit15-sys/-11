@@ -64,6 +64,7 @@ const GROUP_ORDER = ['Контент', 'Объявления', 'Сайт'];
 const STATUS_BAR_COLOR: Record<LeadStatus, string> = {
   new: 'bg-blue-500',
   in_progress: 'bg-amber-500',
+  interaction_scheduled: 'bg-indigo-500',
   converted: 'bg-emerald-500',
   lost: 'bg-slate-400',
   spam: 'bg-red-500',
@@ -231,7 +232,7 @@ export default async function DashboardPage() {
                     className="group rounded-xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
                   >
                     <div className="flex items-start justify-between">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${color.bg} ${color.text}`}>
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${color?.bg ?? ''} ${color?.text ?? ''}`}>
                         <Icon className="h-6 w-6" />
                       </div>
                       <ArrowRight className="h-5 w-5 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-slate-500 dark:text-slate-500" />

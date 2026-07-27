@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { adminUsers } from '@db/schema';
-import { and, count, eq, ne } from 'drizzle-orm';
+import { and, count, eq, ne, sql } from 'drizzle-orm';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { hashPassword, validatePasswordStrength, type AdminRole } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
@@ -40,7 +40,7 @@ export async function PATCH(
 
     const raw = (await request.json()) as Record<string, unknown>;
 
-    const updates: Partial<typeof adminUsers.$inferInsert> = { updatedAt: new Date() };
+    const updates: Partial<typeof adminUsers.$inferInsert> & Record<string, unknown> = { updatedAt: new Date() };
     const auditPayload: Record<string, unknown> = {};
 
     if (raw.name !== undefined) {
@@ -53,8 +53,9 @@ export async function PATCH(
     if (raw.role !== undefined) {
       const role = String(raw.role) as AdminRole;
       if (!ROLES.includes(role)) return jsonError('Недопустимая роль', 400);
-      // Запрещаем менять роль самому себе, чтобы не разжаловать единственного админа.
-      if (id === auth.user.id && role !== existing.role) {
+      // Запрещаем менять роль самому себе — это закрывает и повышение,
+      // и понижение, чтобы исключить эскалацию привилегий.
+      if (id === auth.user.id) {
         return jsonError('Нельзя изменить собственную роль', 400);
       }
       updates.role = role;
@@ -64,10 +65,13 @@ export async function PATCH(
     // Новый пароль (опционально) — например, кнопка «Сбросить пароль».
     if (raw.password !== undefined && String(raw.password) !== '') {
       const password = String(raw.password);
-      const strength = validatePasswordStrength(password);
+      const strength = validatePasswordStrength(password, existing.email);
       if (!strength.valid) return jsonError(strength.error ?? 'Слабый пароль', 400);
-      updates.passwordHash = await hashPassword(password);
+      updates.passwordHash = await hashPassword(password.normalize('NFKC'));
       updates.requirePasswordChange = true;
+      // Инкрементируем epoch — это сразу инвалидирует все активные сессии
+      // пользователя, кроме текущего админа, выполняющего сброс.
+      (updates as Record<string, unknown>).sessionEpoch = sql`${adminUsers.sessionEpoch} + 1`;
       auditPayload.passwordReset = true;
     }
 
@@ -108,28 +112,40 @@ export async function DELETE(
   }
 
   try {
-    const target = await db.query.adminUsers.findFirst({ where: eq(adminUsers.id, id) });
-    if (!target) return jsonError('Пользователь не найден', 404);
-
-    // Нельзя удалить последнего администратора.
-    if (target.role === 'admin') {
-      const [{ c }] = await db
-        .select({ c: count() })
+    // Атомарная проверка и удаление в одной транзакции с SELECT ... FOR UPDATE —
+    // иначе гонка: два админа одновременно удаляют последних admin'ов → лок-аут.
+    const result = await db.transaction(async (tx) => {
+      const targetRows = await tx
+        .select({ id: adminUsers.id, role: adminUsers.role, email: adminUsers.email })
         .from(adminUsers)
-        .where(and(eq(adminUsers.role, 'admin'), ne(adminUsers.id, id)));
-      if (Number(c) === 0) {
-        return jsonError('Нельзя удалить последнего администратора', 400);
-      }
-    }
+        .where(eq(adminUsers.id, id))
+        .for('update');
+      const target = targetRows[0];
+      if (!target) return { error: 'Пользователь не найден' as const };
 
-    await db.delete(adminUsers).where(eq(adminUsers.id, id));
+      if (target.role === 'admin') {
+        const countRows = await tx
+          .select({ c: count() })
+          .from(adminUsers)
+          .where(and(eq(adminUsers.role, 'admin'), ne(adminUsers.id, id)));
+        const c = countRows[0]?.c ?? 0;
+        if (Number(c) === 0) {
+          return { error: 'Нельзя удалить последнего администратора' as const };
+        }
+      }
+
+      await tx.delete(adminUsers).where(eq(adminUsers.id, id));
+      return { ok: true as const, target };
+    });
+
+    if ('error' in result) return jsonError(result.error ?? 'Ошибка', 404);
 
     await logAudit({
       userId: auth.user.id,
       action: 'delete',
       entity: 'admin_users',
       entityId: id,
-      payload: { email: target.email, role: target.role },
+      payload: { email: result.target.email, role: result.target.role },
       ip: clientIp(request),
       userAgent: request.headers.get('user-agent'),
     });

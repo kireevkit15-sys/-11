@@ -25,11 +25,15 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   return (
     <button
       onClick={toggle}
+      type="button"
+      suppressHydrationWarning
       className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-white/50 transition-all hover:bg-white/10 hover:text-white ${className}`}
       aria-label={dark ? 'Светлая тема' : 'Тёмная тема'}
     >
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      <span className="text-sm">{dark ? 'Светлая тема' : 'Тёмная тема'}</span>
+      <span className="text-sm" suppressHydrationWarning>
+        {dark ? 'Светлая тема' : 'Тёмная тема'}
+      </span>
     </button>
   );
 }

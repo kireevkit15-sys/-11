@@ -6,12 +6,15 @@
  * Query-параметры:
  *   ?action=  — фильтр по действию
  *   ?entity=  — фильтр по сущности
- *   ?limit=   — максимум записей (по умолчанию 100, максимум 500)
+ *   ?from=    — ISO-timestamp, начало периода
+ *   ?to=      — ISO-timestamp, конец периода
+ *   ?limit=   — записей на странице (1..500, default 100)
+ *   ?offset=  — смещение (>= 0, default 0)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { auditLogs, adminUsers } from '@db/schema';
 import { authorize, dbErrorResponse } from '@/lib/api-helpers';
 
@@ -25,15 +28,25 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action')?.trim();
   const entity = searchParams.get('entity')?.trim();
+  const fromStr = searchParams.get('from');
+  const toStr = searchParams.get('to');
 
   const rawLimit = parseInt(searchParams.get('limit') ?? '', 10);
   const limit = Number.isNaN(rawLimit)
     ? DEFAULT_LIMIT
     : Math.min(Math.max(rawLimit, 1), MAX_LIMIT);
+  const offset = Math.max(0, Number(searchParams.get('offset') ?? 0));
+
+  const from = fromStr ? new Date(fromStr) : null;
+  const to = toStr ? new Date(toStr) : null;
+  const fromValid = from && !Number.isNaN(from.getTime()) ? from : null;
+  const toValid = to && !Number.isNaN(to.getTime()) ? to : null;
 
   const conditions = [
     action ? eq(auditLogs.action, action) : undefined,
     entity ? eq(auditLogs.entity, entity) : undefined,
+    fromValid ? gte(auditLogs.createdAt, fromValid) : undefined,
+    toValid ? lte(auditLogs.createdAt, toValid) : undefined,
   ].filter(Boolean);
 
   try {
@@ -52,9 +65,10 @@ export async function GET(request: NextRequest) {
       .leftJoin(adminUsers, eq(auditLogs.userId, adminUsers.id))
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(auditLogs.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
 
-    return NextResponse.json({ data: rows });
+    return NextResponse.json({ data: rows, pagination: { limit, offset } });
   } catch (error) {
     return dbErrorResponse(error);
   }

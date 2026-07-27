@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind v4 автодетектит файлы для сканирования по @tailwindcss/cli.
+ * В монорепо с output: "standalone" автодетект не находит diva-admin/src,
+ * и в собранном CSS нет utility-классов — админка рендерится без стилей
+ * (DEPLOY-BLOCKERS (4).md, замечание 10). Указываем источники явно.
+ */
+@source "../**/*.{ts,tsx,js,jsx}";
+
 /* Тёмная тема — class-based (переключатель на .dark у <html>). */
 @custom-variant dark (&:where(.dark, .dark *));
 

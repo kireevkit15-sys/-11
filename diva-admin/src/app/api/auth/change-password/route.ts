@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { validateCredentials, changePassword, validatePasswordStrength } from '@/lib/auth';
+import { eq } from 'drizzle-orm';
+import {
+  validateCredentials,
+  changePassword,
+  validatePasswordStrength,
+} from '@/lib/auth';
+import { adminUsers } from '@db/schema';
 import { currentUser } from '@/lib/api-helpers';
 import { setSessionUser } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
+import { db } from '@/lib/db';
 
 const schema = z.object({
   currentPassword: z.string().min(1, 'Введите текущий пароль'),
@@ -17,7 +24,8 @@ export async function POST(request: NextRequest) {
 
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+      const message = parsed.error.issues[0]?.message ?? 'Некорректные данные';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
     const { currentPassword, newPassword } = parsed.data;
 
@@ -26,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (!ok) return NextResponse.json({ error: 'Текущий пароль неверен' }, { status: 400 });
 
     // Проверяем стойкость нового
-    const strength = validatePasswordStrength(newPassword);
+    const strength = validatePasswordStrength(newPassword, user.email);
     if (!strength.valid) return NextResponse.json({ error: strength.error }, { status: 400 });
 
     if (newPassword === currentPassword) {
@@ -34,8 +42,32 @@ export async function POST(request: NextRequest) {
     }
 
     await changePassword(user.id, newPassword);
-    // Обновляем сессию — снимаем флаг обязательной смены
-    await setSessionUser({ ...user, requirePasswordChange: false });
+
+    // Перечитываем пользователя из БД — там уже новый sessionEpoch (инвалидирует
+    // старые сессии) и снят флаг обязательной смены пароля. Без этого middleware
+    // выкинет пользователя, потому что cookie содержит старый epoch.
+    const [fresh] = await db
+      .select({
+        id: adminUsers.id,
+        email: adminUsers.email,
+        name: adminUsers.name,
+        role: adminUsers.role,
+        requirePasswordChange: adminUsers.requirePasswordChange,
+        sessionEpoch: adminUsers.sessionEpoch,
+      })
+      .from(adminUsers)
+      .where(eq(adminUsers.id, user.id))
+      .limit(1);
+    if (!fresh) return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
+
+    await setSessionUser({
+      id: fresh.id,
+      email: fresh.email,
+      name: fresh.name,
+      role: fresh.role as 'admin' | 'editor' | 'viewer',
+      requirePasswordChange: fresh.requirePasswordChange,
+      sessionEpoch: fresh.sessionEpoch,
+    });
 
     await logAudit({
       userId: user.id,

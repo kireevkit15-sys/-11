@@ -30,6 +30,7 @@ function emptyByStatus(): LeadsByStatus {
   return {
     new: 0,
     in_progress: 0,
+    interaction_scheduled: 0,
     converted: 0,
     lost: 0,
     spam: 0,

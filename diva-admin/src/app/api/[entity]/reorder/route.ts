@@ -11,10 +11,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { getEntity } from '@/lib/entities';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
+import { revalidateFromEntity } from '@/lib/revalidate-web';
 
 export async function POST(
   request: NextRequest,
@@ -39,14 +40,21 @@ export async function POST(
     const table = entity.table as unknown as Record<string, unknown>;
     const idCol = table.id;
 
-    // Назначаем sortOrder = позиция id в массиве. Каждое обновление —
-    // через ::text-каст id (устойчиво к uuid/serial), последовательно.
-    for (let i = 0; i < ids.length; i++) {
-      await db
-        .update(entity.table)
-        .set({ sortOrder: i } as Record<string, unknown>)
-        .where(eq(sql`${idCol}::text`, ids[i]));
-    }
+    // Строим VALUES-таблицу (id, position) и одним UPDATE применяем порядок.
+    // Это атомарно (single SQL statement), нет N+1 round-trip, и не оставляет
+    // промежуточного «полу-sorted» состояния для читателей.
+    const values = sql.join(
+      ids.map((id, i) => sql`(${id}::text, ${i})`),
+      sql`, `,
+    );
+
+    await db.execute(sql`
+      UPDATE ${entity.table}
+      SET sort_order = v.position
+      FROM (VALUES ${values}) AS v(id, position)
+      WHERE ${entity.table}.id::text = v.id
+        AND ${idCol} IS NOT NULL
+    `);
 
     await logAudit({
       userId: auth.user.id,
@@ -56,6 +64,10 @@ export async function POST(
       ip: clientIp(request),
       userAgent: request.headers.get('user-agent'),
     });
+
+    // Reorder меняет sortOrder — это меняет порядок на главной и в других
+    // местах, где эти сущности выводятся. Сбрасываем ISR-кеш.
+    revalidateFromEntity(slug);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -81,6 +81,13 @@ export interface EntityConfig {
   titleField: string; // что показывать как заголовок записи
   columns: ColumnConfig[]; // колонки таблицы списка
   fields: FieldConfig[]; // поля формы
+  /** Web-страницы, которые зависят от этой сущности.
+   *  Инвалидируются через revalidatePath() после успешной мутации.
+   *  Если не задано — revalidate не вызывается (например, admin_users). */
+  revalidatePaths?: readonly string[];
+  /** Теги для ISR-кеша. Совпадают с тем, что web fetchApi ставит в next.tags.
+   *  Если не задано — admin всё равно вызовет `cms:<slug>` по умолчанию. */
+  revalidateTags?: readonly string[];
 }
 
 const TAX_SYSTEMS = ['УСН-Д', 'УСН-ДР', 'ОСН', 'АУСН', 'ПСН', 'ФСИ', 'Разовое'];
@@ -94,6 +101,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: services,
     orderBy: 'sortOrder',
     titleField: 'title',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:services'],
     columns: [
       { key: 'title', label: 'Название' },
       { key: 'taxSystem', label: 'Налог', kind: 'badge' },
@@ -121,6 +130,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: faqs,
     orderBy: 'sortOrder',
     titleField: 'question',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:faqs'],
     columns: [
       { key: 'question', label: 'Вопрос' },
       { key: 'category', label: 'Категория', kind: 'badge' },
@@ -141,6 +152,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: teamMembers,
     orderBy: 'sortOrder',
     titleField: 'fullName',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:team-members'],
     columns: [
       { key: 'fullName', label: 'Имя' },
       { key: 'position', label: 'Должность' },
@@ -168,6 +181,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: caseStudies,
     orderBy: 'sortOrder',
     titleField: 'title',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:case-studies'],
     columns: [
       { key: 'title', label: 'Кейс' },
       { key: 'clientName', label: 'Клиент' },
@@ -197,6 +212,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: reviews,
     orderBy: 'sortOrder',
     titleField: 'authorName',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:reviews'],
     columns: [
       { key: 'authorName', label: 'Автор' },
       { key: 'source', label: 'Источник', kind: 'badge' },
@@ -249,6 +266,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: videos,
     orderBy: 'sortOrder',
     titleField: 'title',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:videos'],
     columns: [
       { key: 'title', label: 'Название' },
       { key: 'platform', label: 'Платформа', kind: 'badge' },
@@ -274,6 +293,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: siteStatistics,
     orderBy: 'sortOrder',
     titleField: 'label',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:site-statistics'],
     columns: [
       { key: 'label', label: 'Подпись' },
       { key: 'value', label: 'Значение', kind: 'number' },
@@ -346,6 +367,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: socialLinks,
     orderBy: 'sortOrder',
     titleField: 'label',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:social-links'],
     columns: [
       { key: 'label', label: 'Название' },
       { key: 'platform', label: 'Платформа', kind: 'badge' },
@@ -369,6 +392,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: trustPillars,
     orderBy: 'sortOrder',
     titleField: 'title',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:trust-pillars'],
     columns: [
       { key: 'number', label: '№', kind: 'badge' },
       { key: 'title', label: 'Заголовок' },
@@ -438,6 +463,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: announcements,
     orderBy: 'sortOrder',
     titleField: 'title',
+    revalidatePaths: ['/', '/announcements'],
+    revalidateTags: ['cms:announcements'],
     columns: [
       { key: 'title', label: 'Заголовок' },
       { key: 'category', label: 'Категория', kind: 'badge' },
@@ -447,6 +474,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
     fields: [
       { name: 'title', label: 'Заголовок', type: 'text', required: true },
       { name: 'content', label: 'Текст', type: 'textarea', required: true },
+      { name: 'imageUrl', label: 'Обложка (фото)', type: 'image', help: 'Загрузите изображение — появится в карточке на сайте' },
       { name: 'key', label: 'Ключ', type: 'text', required: true },
       { name: 'category', label: 'Категория', type: 'text' },
       { name: 'badge', label: 'Бейдж', type: 'text' },
@@ -466,6 +494,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: partners,
     orderBy: 'sortOrder',
     titleField: 'name',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:partners'],
     columns: [
       { key: 'name', label: 'Имя' },
       { key: 'role', label: 'Роль' },
@@ -503,6 +533,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: announcementMessages,
     orderBy: 'sortOrder',
     titleField: 'message',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:announcement-messages'],
     columns: [
       { key: 'message', label: 'Сообщение' },
       { key: 'ctaText', label: 'Кнопка', kind: 'badge' },
@@ -527,6 +559,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: heroConfigs,
     orderBy: 'id',
     titleField: 'headline',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:hero-configs'],
     columns: [
       { key: 'headline', label: 'Заголовок' },
       { key: 'statNumber', label: 'Цифра', kind: 'badge' },
@@ -557,6 +591,8 @@ export const ENTITIES: Record<string, EntityConfig> = {
     table: footerConfigs,
     orderBy: 'id',
     titleField: 'email',
+    revalidatePaths: ['/'],
+    revalidateTags: ['cms:footer-configs'],
     columns: [
       { key: 'email', label: 'Email' },
       { key: 'workHours', label: 'Часы работы' },
@@ -583,13 +619,25 @@ export type ClientEntity = Omit<EntityConfig, 'table'>;
 /** Сериализуемая часть конфига для передачи в клиентские компоненты. */
 export function getClientEntity(slug: string): ClientEntity | null {
   const e = ENTITIES[slug];
-  if (!e) return null;
+  if (!e || e.hidden) return null;
   const { table: _table, ...rest } = e;
   return rest;
 }
 
 export function getEntity(slug: string): EntityConfig | null {
   return ENTITIES[slug] ?? null;
+}
+
+/**
+ * Возвращает сущность только если она не hidden. Используется в API-роутах
+ * (/api/[entity], /api/[entity]/[id]) — раньше hidden-сущности были доступны
+ * по прямому URL, что раскрывало неподдерживаемые таблицы (articles,
+ * fsi-deadlines и т.п.) даже когда они скрыты из меню.
+ */
+export function getVisibleEntity(slug: string): EntityConfig | null {
+  const e = ENTITIES[slug];
+  if (!e || e.hidden) return null;
+  return e;
 }
 
 const GROUP_ORDER = ['Контент', 'Объявления', 'Сайт'];

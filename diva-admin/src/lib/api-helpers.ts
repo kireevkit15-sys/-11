@@ -3,8 +3,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { eq, sql } from 'drizzle-orm';
 import { getSession, SessionUser } from '@/lib/session';
 import { hasPermission, Permission } from '@/lib/rbac';
+import { db } from '@/lib/db';
+import { adminUsers } from '@db/schema';
 import type { EntityConfig, FieldConfig } from '@/lib/entities';
 
 export function jsonError(message: string, status: number) {
@@ -17,6 +20,74 @@ export async function currentUser(): Promise<SessionUser | null> {
   return session.user ?? null;
 }
 
+/**
+ * Сверяет sessionEpoch из cookie с текущим значением в БД.
+ * Если в БД epoch больше — сессия была инвалидирована сменой пароля или logout.
+ * Возвращает false если сессия мертва (её нужно уничтожить).
+ *
+ * Fail-CLOSED: при сбое БД считаем сессию невалидной. Admin-сессия — критический
+ * ресурс, fail-OPEN означал бы, что атакующий с украденным cookie (epoch != БД)
+ * работает даже когда БД не отвечает. Атакующий может создавать DDoS на БД →
+ * войти как admin. Это неприемлемо.
+ *
+ * Кэширование: в middleware Edge-runtime не имеет доступа к БД, поэтому epoch
+ * сверяется здесь. Чтобы не делать SELECT на КАЖДЫЙ API-запрос (1-3ms × N запросов
+ * на странице списка), кэшируем положительный результат на 5 секунд в in-memory
+ * Map. TTL балансирует между нагрузкой и задержкой инвалидации (если админ
+ * сбросил пароль — старые сессии умрут максимум через 5 секунд).
+ *
+ * TODO(long-term): вынести epoch в Redis или proxy-API /api/_session/check.
+ */
+const SESSION_VALID_TTL_MS = 5_000;
+const SESSION_VALID_MAX_ENTRIES = 1_000;
+const sessionValidCache = new Map<
+  string,
+  { epoch: number; expiresAt: number }
+>();
+function purgeExpiredSessionCache(now: number): void {
+  if (sessionValidCache.size < SESSION_VALID_MAX_ENTRIES) return;
+  for (const [key, value] of sessionValidCache) {
+    if (value.expiresAt <= now) sessionValidCache.delete(key);
+  }
+  // Если всё равно переполнено — LRU-эвикция (Map сохраняет порядок вставки).
+  if (sessionValidCache.size >= SESSION_VALID_MAX_ENTRIES) {
+    const overflow = sessionValidCache.size - SESSION_VALID_MAX_ENTRIES + 1;
+    const it = sessionValidCache.keys();
+    for (let i = 0; i < overflow; i++) {
+      const next = it.next();
+      if (next.done) break;
+      sessionValidCache.delete(next.value);
+    }
+  }
+}
+
+async function isSessionValid(user: SessionUser): Promise<boolean> {
+  if (user.sessionEpoch === undefined) return true; // старая сессия без epoch — пропускаем
+  const cacheKey = `${user.id}:${user.sessionEpoch}`;
+  const now = Date.now();
+  const cached = sessionValidCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) return true;
+
+  try {
+    const rows = await db
+      .select({ epoch: adminUsers.sessionEpoch })
+      .from(adminUsers)
+      .where(eq(adminUsers.id, user.id))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return false; // пользователь удалён
+    const valid = row.epoch === user.sessionEpoch;
+    if (valid) {
+      purgeExpiredSessionCache(now);
+      sessionValidCache.set(cacheKey, { epoch: row.epoch, expiresAt: now + SESSION_VALID_TTL_MS });
+    }
+    return valid;
+  } catch (err) {
+    console.error('[session] epoch check failed (fail-closed):', err);
+    return false;
+  }
+}
+
 /** Гарантирует авторизацию и нужное право. Возвращает либо пользователя, либо Response-ошибку. */
 export async function authorize(
   permission: Permission,
@@ -24,6 +95,9 @@ export async function authorize(
   const user = await currentUser();
   if (!user) return { error: jsonError('Не авторизован', 401) };
   if (!hasPermission(user, permission)) return { error: jsonError('Недостаточно прав', 403) };
+  if (!(await isSessionValid(user))) {
+    return { error: jsonError('Сессия истекла — войдите снова', 401) };
+  }
   return { user };
 }
 
@@ -111,6 +185,10 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown>): 
         const s = value === null || value === undefined ? '' : String(value).trim();
         if (s === '') {
           if (field.required) return { data, error: `Поле «${field.label}» обязательно` };
+          // image: пустая строка = null в БД (явный сброс фото через UI).
+          // Без этого при PUT с пустым полем старое значение фото сохранялось бы,
+          // потому что drizzle.update игнорирует ключи, которых нет в объекте.
+          if (field.type === 'image') data[field.name] = null;
           break; // пропускаем пустое необязательное
         }
         if (s.length > MAX_TEXT_LEN) {
