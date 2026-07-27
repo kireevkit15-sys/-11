@@ -20,6 +20,8 @@
 | [07-development-setup.md](./07-development-setup.md) | Локальная разработка: установка, запуск через Docker, типовые задачи, траблшутинг | Разработка |
 | [08-references.md](./08-references.md) | Сайты-референсы и визуальное направление (Pilot, Stripe, Get-Grant, Фингуру и др.) | Заказчик + дизайнер + разработка |
 | [99-extracted-content.md](./99-extracted-content.md) | Контент с текущего сайта (черновик для скелета) | Разработка + копирайтинг |
+| [10-deploy-blockers-response.md](./10-deploy-blockers-response.md) | Решение трёх VPS-блокеров деплоя | Разработка |
+| [11-admin-audit-2026-07-26.md](./11-admin-audit-2026-07-26.md) | Комплексный аудит админки diva-admin: 10 CRITICAL + 36 HIGH + 50+ MEDIUM + LOW, план устранения по неделям | Разработка |
 
 ---
 

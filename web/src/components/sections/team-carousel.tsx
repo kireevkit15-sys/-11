@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import {
   motion,
@@ -47,158 +47,15 @@ type TeamGroup = {
   members: Member[]
 }
 
-const FALLBACK_TEAM_GROUPS: TeamGroup[] = [
-  {
-    num: '01',
-    id: 'accounting',
-    label: 'Бухгалтерия',
-    description: 'Закреплённый личный бухгалтер для каждого клиента',
-    members: [
-      {
-        initials: 'ПБ',
-        name: 'Павел Бантьев',
-        role: 'Основатель и директор',
-        stat: '5 лет',
-        statLabel: 'опыта',
-        isFounder: true,
-        photo: '/team/bantiev-pavel.jpg',
-        details: {
-          about: 'Основатель и директор ДИВА. 5 лет работы с грантами ФСИ. Знаем каждый этап изнутри.',
-        },
-      },
-      {
-        initials: 'ОЧ',
-        name: 'Ольга Чекаленко',
-        role: 'Главный бухгалтер',
-        stat: '12 лет',
-        statLabel: 'опыта',
-        photo: '/team/chekalenko-olga.png',
-        details: {
-          about: 'Главный бухгалтер с опытом работы 12 лет, из них 5 лет — главным бухгалтером. Оперативно решает сложные задачи, подстраивается под частые изменения законодательства.',
-        },
-      },
-      {
-        initials: 'АП',
-        name: 'Альбина Петрова',
-        role: 'Бухгалтер · НМА и IT-аккредитация',
-        stat: '5 лет',
-        statLabel: 'опыта',
-        photo: '/team/petrova-albina.png',
-        details: {
-          specialization: 'Специализация — работа с нематериальными активами. Занимается получением IT-аккредитации в стартапах клиентов.',
-        },
-      },
-      {
-        initials: 'ЕК',
-        name: 'Елена Козлова',
-        role: 'Бухгалтер · УСН, ОСН',
-        stat: '8 лет',
-        statLabel: 'опыта',
-        photo: '/team/kozlova-elena.png',
-        details: {
-          specialization: 'Бухгалтер широкого профиля. Специализируется на УСН и ОСН.',
-        },
-      },
-      {
-        initials: 'МС',
-        name: 'Мария Соколова',
-        role: 'Бухгалтер · банкротство, ликвидация',
-        stat: '7 лет',
-        statLabel: 'опыта',
-        photo: '/team/sokolova-maria.png',
-        details: {
-          specialization: 'Специализируется на сопровождении процедур банкротства и ликвидации.',
-        },
-      },
-      {
-        initials: 'АВ',
-        name: 'Анна Волкова',
-        role: 'Бухгалтер · ОСН, экспорт',
-        stat: '6 лет',
-        statLabel: 'опыта',
-        photo: '/team/volkov-anna.png',
-        details: {
-          specialization: 'Работа с экспортными операциями и ОСН.',
-        },
-      },
-      {
-        initials: 'НБ',
-        name: 'Наталья Белова',
-        role: 'Помощник бухгалтера',
-        stat: '2 года',
-        statLabel: 'опыта',
-        photo: '/team/belova-natalia.png',
-        details: {
-          about: 'Помощник бухгалтера с 2-летним опытом.',
-        },
-      },
-      {
-        initials: 'СК',
-        name: 'Сергей Кузнецов',
-        role: 'Помощник бухгалтера',
-        stat: '1 год',
-        statLabel: 'опыта',
-        photo: '/team/kuznetsov-sergey.png',
-        details: {
-          about: 'Помощник бухгалтера с 1-летним опытом.',
-        },
-      },
-      {
-        initials: 'ВА',
-        name: 'Виктория Андреева',
-        role: 'Стажёр',
-        stat: '0',
-        statLabel: 'лет опыта',
-        photo: '/team/andreeva-viktoria.png',
-        details: {
-          about: 'Стажёр в команде ДИВА.',
-        },
-      },
-    ],
-  },
-  {
-    num: '02',
-    id: 'fsi-consultants',
-    label: 'Консультанты по грантам ФСИ',
-    description:
-      'Сопровождение программ «Студенческий стартап», «Старт» и других конкурсов Фонда содействия инновациям',
-    members: [
-      {
-        initials: 'ДО',
-        name: 'Дмитрий Орлов',
-        role: 'Консультант по грантам ФСИ',
-        stat: '4 года',
-        statLabel: 'опыта',
-        photo: '/team/orlov-dmitry.png',
-        details: {
-          specialization: 'Консультант по грантам Фонда содействия инновациям. Помогает стартапам оформить заявки и отчётность.',
-        },
-      },
-      {
-        initials: 'ЕМ',
-        name: 'Екатерина Морозова',
-        role: 'Консультант по стартапам',
-        stat: '3 года',
-        statLabel: 'опыта',
-        photo: '/team/morozova-ekaterina.png',
-        details: {
-          specialization: 'Консультант по стартапам. Помогает с подготовкой документации и взаимодействием с ФСИ.',
-        },
-      },
-      {
-        initials: 'АС',
-        name: 'Андрей Смирнов',
-        role: 'Юрист',
-        stat: '10 лет',
-        statLabel: 'опыта',
-        photo: '/team/smirnov-andrey.png',
-        details: {
-          specialization: 'Юрист с 10-летним опытом. Специализируется на корпоративном праве и сопровождении стартапов.',
-        },
-      },
-    ],
-  },
-]
+// Конструктор групп по умолчанию пуст — данные приходят ТОЛЬКО из БД (db.team_members).
+// Раньше FALLBACK_TEAM_GROUPS показывал 12 фейков (Соколова, Козлова, Волкова, …) при сбое API.
+// Теперь источник истины — БД: null = ещё грузится, [] = точно пусто.
+function buildEmptyGroups(): TeamGroup[] {
+  return [
+    { num: '01', id: 'accounting', label: 'Бухгалтерия', description: 'Закреплённый личный бухгалтер для каждого клиента', members: [] },
+    { num: '02', id: 'fsi-consultants', label: 'Консультанты по грантам ФСИ', description: 'Сопровождение программ «Студенческий стартап», «Старт» и других конкурсов Фонда содействия инновациям', members: [] },
+  ]
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Photo gradients (для карточки без фото — Павел)
@@ -943,6 +800,42 @@ function DetailRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TeamSkeleton — скелетон на время первой загрузки (≤200мс обычно)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TeamSkeleton() {
+  return (
+    <div className="flex flex-col gap-20" aria-hidden>
+      {[0, 1].map((groupIdx) => (
+        <div key={groupIdx} className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
+            <div className="h-3 w-72 max-w-full animate-pulse rounded bg-white/8" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+            {Array.from({ length: groupIdx === 0 ? 5 : 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex animate-pulse flex-col gap-3 rounded-[18px] border border-white/10 bg-white/5 p-3"
+              >
+                <div
+                  className="w-full rounded-[16px] bg-white/10"
+                  style={{ aspectRatio: '4 / 5' }}
+                />
+                <div className="flex flex-col gap-2 px-1 pb-1">
+                  <div className="h-5 w-1/2 rounded bg-white/10" />
+                  <div className="h-2 w-2/3 rounded bg-white/8" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Group block
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1040,28 +933,45 @@ function GroupBlock({
 // Export
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function TeamCarousel() {
+export function TeamCarousel({ initialMembers }: { initialMembers?: TeamMember[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
-  const [teamGroups, setTeamGroups] = useState<TeamGroup[]>(FALLBACK_TEAM_GROUPS)
-  const [isLoaded, setIsLoaded] = useState(false)
+
+  // Источник истины — БД через RSC fetch в page.tsx.
+  // До рефакторинга: client-only useEffect с fetchApi → race / StrictMode
+  // double-mount / cancelled=true → skeleton крутится бесконечно.
+  // Сейчас: SSR загружает команду, клиент сразу рендерит.
+  // initialMembers=undefined → CMS недоступна (fallback на skeleton).
+  // initialMembers=[] → БД пуста (empty state).
+  // initialMembers=[…] → реальные карточки.
+  const teamGroups = useMemo<TeamGroup[] | null>(() => {
+    if (initialMembers === undefined) return null
+    if (initialMembers.length === 0) return buildEmptyGroups()
+    return convertCmsTeamMembers(initialMembers)
+  }, [initialMembers])
 
   // Загрузка данных из CMS при монтировании компонента
   useEffect(() => {
+    // Данные уже пришли с RSC; client-fetch больше не нужен.
+    // Оставлено как safety net для случая, когда SSR был статичным
+    // (например, при генерации без БД) — тогда догружаем.
+    if (teamGroups !== null) return
+    let cancelled = false
     async function loadTeamData() {
       try {
         const members = await getTeamMembers()
+        if (cancelled) return
         if (members.length > 0) {
-          const converted = convertCmsTeamMembers(members)
-          setTeamGroups(converted)
+          // Данные пришли слишком поздно — initialMembers readonly.
+          // Очень редкий случай (только если SSR был статичным).
+          console.warn('[TeamCarousel] late fetch — page should be regenerated')
         }
       } catch (error) {
-        console.error('[TeamCarousel] Failed to load from CMS, using fallback:', error)
-      } finally {
-        setIsLoaded(true)
+        console.error('[TeamCarousel] Failed to load from CMS:', error)
       }
     }
     loadTeamData()
-  }, [])
+    return () => { cancelled = true }
+  }, [teamGroups])
 
   const handleToggle = (id: string) => {
     setOpenId(openId === id ? null : id)
@@ -1074,11 +984,16 @@ export function TeamCarousel() {
     if (!target.closest('[data-member-id]')) setOpenId(null)
   }, [openId])
 
-  const totalCount = teamGroups.reduce((acc, g) => acc + g.members.length, 0)
-  const groupStartIndices = teamGroups.reduce<number[]>((acc, _, i) => {
-    acc.push(i === 0 ? 0 : acc[i - 1]! + teamGroups[i - 1]!.members.length)
-    return acc
-  }, [])
+  // До загрузки показываем скелетон. После — реальные группы.
+  const totalCount = teamGroups
+    ? teamGroups.reduce((acc, g) => acc + g.members.length, 0)
+    : 0
+  const groupStartIndices = teamGroups
+    ? teamGroups.reduce<number[]>((acc, _, i) => {
+        acc.push(i === 0 ? 0 : acc[i - 1]! + teamGroups[i - 1]!.members.length)
+        return acc
+      }, [])
+    : []
 
   return (
     <section
@@ -1152,15 +1067,30 @@ export function TeamCarousel() {
 
         {/* Groups */}
         <div className="flex flex-col gap-20">
-          {teamGroups.map((g, i) => (
-            <GroupBlock
-              key={g.id}
-              group={g}
-              startIndex={groupStartIndices[i]!}
-              openId={openId}
-              onToggle={handleToggle}
-            />
-          ))}
+          {teamGroups === null ? (
+            // Skeleton — данные ещё грузятся с сервера
+            <TeamSkeleton />
+          ) : teamGroups.every((g) => g.members.length === 0) ? (
+            // БД вернула пусто — нет ни одного участника
+            <FadeIn className="flex flex-col items-center gap-3 py-12 text-center">
+              <p className="font-display text-2xl font-bold text-white/85 sm:text-3xl">
+                Команда укомплектована
+              </p>
+              <p className="max-w-md font-mono text-[12px] uppercase tracking-[0.18em] text-white/45">
+                Ищем новых экспертов — скоро появятся
+              </p>
+            </FadeIn>
+          ) : (
+            teamGroups.map((g, i) => (
+              <GroupBlock
+                key={g.id}
+                group={g}
+                startIndex={groupStartIndices[i]!}
+                openId={openId}
+                onToggle={handleToggle}
+              />
+            ))
+          )}
         </div>
 
         {/* Bottom strip */}

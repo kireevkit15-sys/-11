@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowRight, CheckCircle, Moon, PhoneCall, Sun, SunHorizon, TelegramLogo, X } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { isValidContact } from '@/lib/contact-validation'
 
 const TIMES = [
   { id: 'morning', label: 'Утром',   sub: '09–12', Icon: SunHorizon },
@@ -214,6 +215,14 @@ export function ConsultModal({ onClose }: { onClose: () => void }) {
                     if (loading) return
                     if (!trimmedName || !trimmedPhone) {
                       setError('Заполните имя и контакт для связи.')
+                      return
+                    }
+                    // Клиентская проверка формата контакта. Серверная
+                    // (api/leads) делает то же самое и не пропустит
+                    // мусор вроде "+7777" — но мы даём понять сразу,
+                    // чтобы не тратить round-trip. См. замечание 8.
+                    if (!isValidContact(trimmedPhone)) {
+                      setError('Укажите телефон (+7XXXXXXXXXX) или Telegram (@username).')
                       return
                     }
 

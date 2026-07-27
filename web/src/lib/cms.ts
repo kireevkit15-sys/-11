@@ -31,7 +31,12 @@ import type {
 // Конфигурация
 // =============================================================================
 
-const API_BASE = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+// На клиенте относительный URL — браузер бьёт свой origin (где открыт сайт),
+// это устраняет проблему, когда NEXT_PUBLIC_SITE_URL указывает на порт,
+// занятый другим стеком. На сервере используем абсолютный URL из env.
+const API_BASE = typeof window === 'undefined'
+  ? (process.env.NEXT_PUBLIC_SITE_URL ?? '')
+  : '';
 
 // =============================================================================
 // Типы для API ответов
@@ -57,11 +62,27 @@ interface ApiError {
 // Вспомогательные функции
 // =============================================================================
 
+/**
+ * Извлекает имя сущности из endpoint для тегирования ISR-кеша.
+ *   '/services'         → 'services'
+ *   '/videos?limit=10'  → 'videos'
+ *   '/'                 → 'all'
+ * Тег формируется как `cms:<entity>` в fetchApi ниже.
+ */
+function entityNameFromEndpoint(endpoint: string): string {
+  const cleaned = endpoint.replace(/^\/+/, '').split('?')[0]!.split('/')[0]!;
+  return cleaned || 'all';
+}
+
 async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T[]> {
   const url = `${API_BASE}/api/content${endpoint}`;
+
+  // Tag из slug: '/services' → 'cms:services'. Используется admin'ом
+  // для on-demand revalidate через revalidateTag('cms:services').
+  const tag = `cms:${entityNameFromEndpoint(endpoint)}`;
 
   try {
     const response = await fetch(url, {
@@ -70,8 +91,9 @@ async function fetchApi<T>(
         'Content-Type': 'application/json',
         ...options?.headers,
       },
-      // Кеширование: 60 секунд для Server Components
-      next: { revalidate: 60 },
+      // Кеширование: 60 секунд для Server Components + tag для on-demand
+      // инвалидации через /api/revalidate из diva-admin.
+      next: { revalidate: 60, tags: [tag] },
     });
 
     if (!response.ok) {
@@ -463,8 +485,12 @@ export function getMediaUrl(path: string | null | undefined): string | null {
     return path;
   }
 
-  // Если локальный путь — добавляем base URL
-  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+  // Локальный путь возвращаем относительным (начинается с /). Не клеим
+  // API_BASE (= NEXT_PUBLIC_SITE_URL): иначе next/image получает абсолютный
+  // URL, требует host в images.remotePatterns и возвращает 400
+  // ("url" parameter is not allowed) для собственного домена.
+  // См. DEPLOY-BLOCKERS (4).md, замечание 4.
+  return path.startsWith('/') ? path : `/${path}`;
 }
 
 // =============================================================================

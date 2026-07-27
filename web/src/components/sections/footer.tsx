@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
 import { ConsultModal } from '@/components/sections/consult-modal'
+import { isValidContact } from '@/lib/contact-validation'
 import { getSocialLinks, getFooterConfig } from '@/lib/cms'
 
 type SocialLinkFromCMS = {
@@ -72,7 +73,9 @@ const companyLinks: FooterLink[] = [
   { label: 'О нас', href: '#about' },
   { label: 'Команда', href: '#team' },
   { label: 'Кейсы', href: '#cases' },
-  { label: 'Блог', href: '#' },
+  // "Блог" в хедере ведёт на /#content. В футере раньше был href: '#',
+  // что скроллило наверх страницы. Приведено к тому же якорю, что в хедере.
+  { label: 'Блог', href: '/#content' },
   { label: 'Контакты', href: '#contacts' },
 ]
 
@@ -154,6 +157,13 @@ export function Footer() {
     e.preventDefault()
     const email = checklistEmail.trim()
     if (!email || checklistSubmitting) return
+
+    // Клиентская проверка формата email/телефона/Telegram. Серверная
+    // всё равно проверяет, но UX — мгновенная обратная связь.
+    if (!isValidContact(email)) {
+      setChecklistError('Укажите корректный email, телефон или Telegram.')
+      return
+    }
 
     setChecklistSubmitting(true)
     setChecklistError('')

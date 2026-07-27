@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
@@ -39,9 +39,9 @@ const navLinks = [
   { label: 'Услуги',       href: '/#services',       sectionId: 'services', hasMega: 'services' as const },
   { label: 'О нас',        href: '/#trust',           sectionId: 'trust',    hasMega: 'about' as const },
   { label: 'Блог',         href: '/#content',         sectionId: 'content' },
-  { label: 'Объявления',   href: '/announcements',    sectionId: '' },
+  { label: 'Объявления',   href: '/announcements',    sectionId: '', prefetch: true },
   { label: 'FAQ',          href: '/#faq',             sectionId: 'faq' },
-]
+] as const
 
 const aboutLinks = [
   { Icon: Star,       label: 'Цифры и экспертиза', desc: '780 стартапов, 1100+ консультаций',  href: '/#trust' },
@@ -252,9 +252,10 @@ export function Header() {
               }
 
               return (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={'prefetch' in link ? (link as { prefetch?: boolean }).prefetch ?? true : true}
                   className={cn(
                     'rounded-full px-3.5 py-2 font-display text-[14px] font-semibold transition-all duration-200',
                     isActive
@@ -263,7 +264,7 @@ export function Header() {
                   )}
                 >
                   {link.label}
-                </a>
+                </Link>
               )
             })}
           </nav>

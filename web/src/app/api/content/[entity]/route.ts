@@ -151,7 +151,25 @@ export async function GET(
 
     const records = await query;
 
-    return NextResponse.json({ data: records });
+    // Нормализация сущностей, которые в БД хранятся плоскими колонками,
+    // а компоненты ждут вложенный объект. Сейчас это partners: в БД
+    // github_link/portfolio_link/vk_link/telegram_link лежат плоско, а
+    // announcement-card.tsx и data/partners.ts ждут `links: { github, ... }`.
+    // Без маппинга /announcements падает в браузере на `item.links.github`.
+    let data = records;
+    if (entity === 'partners') {
+      data = (records as unknown as Array<Record<string, unknown>>).map((r) => ({
+        ...r,
+        links: {
+          github: r.githubLink ?? r.github_link ?? null,
+          portfolio: r.portfolioLink ?? r.portfolio_link ?? null,
+          vk: r.vkLink ?? r.vk_link ?? null,
+          telegram: r.telegramLink ?? r.telegram_link ?? null,
+        },
+      }));
+    }
+
+    return NextResponse.json({ data });
   } catch (error) {
     console.error(`[Content API] GET /${entity}:`, error);
     return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });

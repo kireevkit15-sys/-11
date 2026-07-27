@@ -11,18 +11,38 @@ import { partners as staticPartners, partnerTags as staticTags } from '@/data/pa
 import type { Partner } from '@/data/partners'
 import { cn } from '@/lib/utils'
 
-// Fetch partners from our API
+// In-memory cache на уровне модуля — после первого успешного fetchPartners
+// все последующие вызовы возвращают данные мгновенно без сети.
+let partnersCache: Partner[] | null = null
+let partnersPromise: Promise<Partner[]> | null = null
+
 async function fetchPartners(): Promise<Partner[]> {
-  try {
-    const res = await fetch('/api/content/partners', {
-      next: { revalidate: 60 },
-    })
-    if (!res.ok) throw new Error('API error')
-    const json = await res.json()
-    return json.data || []
-  } catch {
-    return []
-  }
+  if (partnersCache) return partnersCache
+  if (partnersPromise) return partnersPromise
+  partnersPromise = (async () => {
+    try {
+      const res = await fetch('/api/content/partners', { cache: 'default' })
+      if (!res.ok) throw new Error('API error')
+      const json = await res.json()
+      const data = (json.data || []) as Partner[]
+      if (data.length > 0) partnersCache = data
+      return data
+    } catch {
+      return []
+    } finally {
+      partnersPromise = null
+    }
+  })()
+  return partnersPromise
+}
+
+// useHydrated: true только после mount. До гидратации React на сервере
+// рендерит ТОЛЬКО статику (staticPartners), и клиент видит тот же HTML —
+// никакого mismatch даже если API ответил синхронно через module cache.
+function useHydrated(): boolean {
+  const [h, setH] = useState(false)
+  useEffect(() => { setH(true) }, [])
+  return h
 }
 
 // CTA блок с бегущим огнём и анимированной кнопкой
@@ -136,16 +156,16 @@ function CtaBlock() {
 }
 
 // HUD-терминал с печатающимся текстом
+// Сокращённый список: оставляем только 4 знаковые строки, чтобы терминал
+// не вытягивался на пол-экрана и не налезал на карточки ниже.
 const HUD_LINES = [
-  { prefix: '>', text: 'Инициализация базы специалистов...', color: 'text-brand-soft/70', delay: 0 },
-  { prefix: '✓', text: '1 команда загружена', color: 'text-emerald-400', delay: 700 },
-  { prefix: '>', text: 'Поиск: Full-stack · Mobile · AI', color: 'text-white/60', delay: 1400 },
-  { prefix: '●', text: 'Syntax Labs — доступна', color: 'text-emerald-400', delay: 2100 },
-  { prefix: '>', text: 'Стек: Next.js · React Native · Go', color: 'text-brand-soft/70', delay: 2800 },
-  { prefix: '✓', text: 'Статус: Открыта к проектам', color: 'text-[#FB923C]', delay: 3500 },
+  { prefix: '>', text: 'Поиск команды · Full-stack / Mobile / AI', color: 'text-brand-soft/70', delay: 0 },
+  { prefix: '✓', text: 'База: 1 команда загружена', color: 'text-emerald-400', delay: 800 },
+  { prefix: '●', text: 'Syntax Labs — открыта к проектам', color: 'text-emerald-400', delay: 1600 },
+  { prefix: '✓', text: 'Стек: Next.js · React Native · Go', color: 'text-[#FB923C]', delay: 2400 },
 ]
 
-const SKILLS = ['Next.js', 'React Native', 'Python / AI', 'Go / Node.js', 'Kubernetes', 'Design Systems']
+const SKILLS = ['Next.js', 'React Native', 'Python / AI', 'Go / Node.js']
 
 function HudTerminal() {
   const [visibleLines, setVisibleLines] = useState<number[]>([])
@@ -192,19 +212,15 @@ function HudTerminal() {
       initial={{ opacity: 0, x: 24, y: -10 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute hidden lg:flex lg:flex-col"
+      className="hidden xl:flex xl:flex-col self-start"
       style={{
-        right: 0,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: '380px',
+        width: '300px',
         background: 'linear-gradient(160deg, rgba(8,4,16,0.96) 0%, rgba(18,10,36,0.94) 100%)',
         backdropFilter: 'blur(32px)',
         WebkitBackdropFilter: 'blur(32px)',
         border: '1px solid rgba(167,139,250,0.18)',
         borderRadius: '18px',
         boxShadow: '0 0 60px rgba(124,58,237,0.20), 0 0 120px rgba(124,58,237,0.08), inset 0 1px 0 rgba(167,139,250,0.18)',
-        zIndex: 10,
         overflow: 'hidden',
       }}
     >
@@ -212,25 +228,25 @@ function HudTerminal() {
       <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, rgba(167,139,250,0.8) 40%, rgba(251,146,60,0.6) 70%, transparent)', flexShrink: 0 }} />
 
       {/* Title bar */}
-      <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-3" style={{ flexShrink: 0 }}>
+      <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5" style={{ flexShrink: 0 }}>
         <div className="flex gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
           <div className="h-2.5 w-2.5 rounded-full bg-[#FFBD2E]" />
           <div className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
         </div>
-        <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/25">diva_search.exe</span>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="font-mono text-[9px] text-white/20">v2.4.1</span>
+        <span className="ml-1 font-mono text-[10px] uppercase tracking-[0.18em] text-white/30 truncate">diva_search.exe</span>
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          <span className="font-mono text-[9px] text-white/25">v2.4</span>
           <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
             animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="px-5 pt-3 pb-1" style={{ flexShrink: 0 }}>
+      <div className="px-4 pt-3 pb-1" style={{ flexShrink: 0 }}>
         <div className="flex items-center justify-between mb-1">
-          <span className="font-mono text-[9px] text-white/25 uppercase tracking-widest">Загрузка базы</span>
-          <span className="font-mono text-[9px] text-brand-soft/50">{progress}%</span>
+          <span className="font-mono text-[9px] text-white/30 uppercase tracking-widest">Загрузка</span>
+          <span className="font-mono text-[9px] text-brand-soft/60 tabular-nums">{progress}%</span>
         </div>
         <div className="h-[3px] w-full rounded-full bg-white/[0.06] overflow-hidden">
           <motion.div className="h-full rounded-full"
@@ -240,14 +256,14 @@ function HudTerminal() {
       </div>
 
       {/* Terminal lines */}
-      <div className="flex flex-col gap-1.5 px-5 py-3" style={{ flexShrink: 0 }}>
+      <div className="flex flex-col gap-1.5 px-4 py-3 min-h-[110px]" style={{ flexShrink: 0 }}>
         {HUD_LINES.map((line, i) => (
           <AnimatePresence key={i}>
             {visibleLines.includes(i) && (
               <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2 }} className="flex items-start gap-2">
-                <span className={cn('font-mono text-[11px] shrink-0 mt-px w-3 text-center', line.color)}>{line.prefix}</span>
-                <span className="font-mono text-[11px] text-white/65 leading-relaxed">
+                <span className={cn('font-mono text-[11px] shrink-0 mt-px w-3 text-center leading-[1.4]', line.color)}>{line.prefix}</span>
+                <span className="font-mono text-[11px] text-white/70 leading-[1.4] break-words">
                   {i === typingIdx ? typedText : line.text}
                   {i === typingIdx && typedText.length < line.text.length && (
                     <motion.span className="inline-block w-[5px] h-[10px] bg-brand-soft/80 ml-0.5 align-middle"
@@ -261,40 +277,41 @@ function HudTerminal() {
       </div>
 
       {/* Divider */}
-      <div className="mx-5 h-px bg-white/[0.06]" style={{ flexShrink: 0 }} />
+      <div className="mx-4 h-px bg-white/[0.06]" style={{ flexShrink: 0 }} />
 
       {/* Found profile block */}
       <AnimatePresence>
         {showProfile && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="px-5 py-4" style={{ flexShrink: 0 }}>
-            <div className="mb-3 flex items-center gap-1.5">
-              <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-brand-soft/50">Найден профиль</span>
+            className="px-4 py-3" style={{ flexShrink: 0 }}>
+            <div className="mb-2.5 flex items-center gap-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-brand-soft/60">Найден профиль</span>
               <div className="flex-1 h-px bg-brand-soft/10" />
             </div>
             {/* Avatar + name */}
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-display text-sm font-bold text-white"
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-display text-[13px] font-bold text-white"
                 style={{ background: 'linear-gradient(135deg, hsl(240,65%,45%), hsl(280,70%,55%))', boxShadow: '0 0 20px rgba(124,58,237,0.5)' }}>
                 SL
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0A0612]" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#0A0612]" />
               </div>
-              <div>
-                <p className="font-display text-sm font-bold text-white">Syntax Labs</p>
-                <p className="font-mono text-[10px] text-white/40">Full-stack команда · @kitafun</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[13px] font-bold text-white truncate">Syntax Labs</p>
+                <p className="font-mono text-[10px] text-white/40 truncate">Full-stack · @kitafun</p>
               </div>
-              <div className="ml-auto rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5">
-                <span className="font-mono text-[9px] text-emerald-400">● online</span>
+              <div className="flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 shrink-0">
+                <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                <span className="font-mono text-[9px] text-emerald-400">online</span>
               </div>
             </div>
             {/* Skills */}
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {SKILLS.map((s, i) => (
                 <motion.span key={s}
                   animate={activeSkill === i ? { borderColor: 'rgba(167,139,250,0.6)', color: 'rgba(167,139,250,1)', boxShadow: '0 0 10px rgba(167,139,250,0.3)' } : { borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)', boxShadow: 'none' }}
                   transition={{ duration: 0.3 }}
-                  className="rounded-md border px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest"
+                  className="rounded border px-1.5 py-0.5 font-mono text-[9px] leading-[1.3]"
                   style={{ background: 'rgba(255,255,255,0.03)' }}>
                   {s}
                 </motion.span>
@@ -305,11 +322,11 @@ function HudTerminal() {
       </AnimatePresence>
 
       {/* Bottom command line */}
-      <div className="mt-auto border-t border-white/[0.06] px-5 py-3" style={{ flexShrink: 0 }}>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] text-brand-soft/40">{'>'}</span>
-          <span className="font-mono text-[10px] text-white/20">connect --team=syntax-labs</span>
-          <motion.span className="ml-1 inline-block h-[9px] w-[5px] bg-brand-soft/50"
+      <div className="mt-auto border-t border-white/[0.06] px-4 py-2.5" style={{ flexShrink: 0 }}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-mono text-[10px] text-brand-soft/50 shrink-0">{'>'}</span>
+          <span className="font-mono text-[10px] text-white/30 truncate">connect --team=syntax-labs</span>
+          <motion.span className="inline-block h-[9px] w-[5px] bg-brand-soft/50 shrink-0"
             animate={{ opacity: [1, 0, 1] }} transition={{ duration: 0.8, repeat: Infinity }} />
         </div>
       </div>
@@ -360,25 +377,31 @@ export default function AnnouncementsPage() {
   const reduced = useReducedMotion()
   const [activeCategory] = useState<Partner['category'] | 'all'>('all')
   const [tagsExpanded, setTagsExpanded] = useState(false)
-  const [cmsPartners, setCmsPartners] = useState<Partner[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Initial state = staticPartners → HTML сразу содержит карточки,
+  // нет «пустого» состояния, которое ждёт API. Это критично для LCP.
+  const [cmsPartners, setCmsPartners] = useState<Partner[]>(staticPartners)
+  // useHydrated: до первого mount на клиенте возвращаем staticPartners.
+  // Это гарантирует, что SSR-HTML и первый клиентский рендер идентичны —
+  // даже если API ответил в module cache до hydration.
+  const hydrated = useHydrated()
 
-  // Fetch partners from our API
+  // Fetch partners from our API in background — без блокировки UI.
   useEffect(() => {
-    async function load() {
-      setIsLoading(true)
-      const data = await fetchPartners()
-      setCmsPartners(data)
-      setIsLoading(false)
-    }
-    load()
+    let cancelled = false
+    fetchPartners().then((data) => {
+      if (cancelled) return
+      if (data.length > 0) setCmsPartners(data)
+    })
+    return () => { cancelled = true }
   }, [])
 
-  // Use API data if available, fallback to static data
-  const partnersData = cmsPartners.length > 0 ? cmsPartners : staticPartners
+  // До гидратации показываем только статику (SSR = client = staticPartners).
+  // После гидратации — обновлённые данные из API. Это убирает
+  // "Hydration failed" если API успел ответить синхронно из module cache.
+  const partnersData = hydrated ? cmsPartners : staticPartners
   const partnerTagsData = staticTags
 
-  const visibleTags = tagsExpanded ? partnerTagsData : partnerTagsData.slice(0, 8)
+  const visibleTags = tagsExpanded ? partnerTagsData : partnerTagsData.slice(0, 6)
   const hiddenTagsCount = partnerTagsData.length - visibleTags.length
 
   const filtered = useMemo(() => {
@@ -387,9 +410,10 @@ export default function AnnouncementsPage() {
     })
   }, [partnersData, activeCategory])
 
-  // Show all partners from API (or just featured if loading)
-  const visiblePartners = isLoading ? filtered.filter((item) => item.id === 'syntax-labs') : filtered
-  const showLoadingCard = (activeCategory === 'all' || activeCategory === 'fullstack') && !isLoading
+  const visiblePartners = filtered
+  // Loading-card показываем только если фильтр ВООБЩЕ пуст (например,
+  // когда API ещё не ответил и в статике ничего нет — крайне редкий кейс).
+  const showLoadingCard = visiblePartners.length === 0 && activeCategory !== 'all'
 
   return (
     <div className="relative min-h-screen noise-overlay -mt-[80px] pt-[80px] sm:-mt-[88px] sm:pt-[88px]" style={{ backgroundColor: 'var(--brand-ink)' }}>
@@ -527,38 +551,42 @@ export default function AnnouncementsPage() {
         {/* Hero — заголовок на всю ширину + HUD терминал справа */}
         <FadeIn>
           <section className="relative pb-0" style={{ marginTop: '0' }}>
-            <HudTerminal />
-            <div className="flex flex-col gap-4 lg:max-w-[55%]">
-              <SectionEyebrow number="01" variant="dark">Партнёры и команды</SectionEyebrow>
-              <h1 className="font-display text-5xl font-extrabold leading-[1.02] tracking-[-0.035em] text-white md:text-6xl">
-                Специалисты,{' '}
-                <span className="font-serif-accent italic text-brand-soft">готовые к работе</span>
-              </h1>
-              <p className="text-base text-white/60" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>Команды стартапов ДИВА открыты для контрактных проектов</p>
-                            <div className="flex items-center gap-2">
-                <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
-                  animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
-                <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{partnersData.length} команд · обновлено сегодня</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {visibleTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/60"
+            {/* Двухколоночный grid: контент слева, HUD справа.
+                На <xl HUD не рендерится (hidden xl:flex), контент занимает всю ширину. */}
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div className="flex flex-col gap-4 xl:max-w-[58%]">
+                <SectionEyebrow number="01" variant="dark">Партнёры и команды</SectionEyebrow>
+                <h1 className="font-display text-5xl font-extrabold leading-[1.02] tracking-[-0.035em] text-white md:text-6xl">
+                  Специалисты,{' '}
+                  <span className="font-serif-accent italic text-brand-soft">готовые к работе</span>
+                </h1>
+                <p className="text-base text-white/60" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.8)' }}>Команды стартапов ДИВА открыты для контрактных проектов</p>
+                              <div className="flex items-center gap-2">
+                  <motion.span className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+                    animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
+                  <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{partnersData.length} команд · обновлено сегодня</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/60"
+                      style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setTagsExpanded((value) => !value)}
+                    className="rounded-full border border-brand-soft/30 bg-brand-soft/12 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brand-soft transition hover:border-brand-soft/50 hover:bg-brand-soft/18"
                     style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
                   >
-                    {tag}
-                  </span>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setTagsExpanded((value) => !value)}
-                  className="rounded-full border border-brand-soft/30 bg-brand-soft/12 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-brand-soft transition hover:border-brand-soft/50 hover:bg-brand-soft/18"
-                  style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-                >
-                  {tagsExpanded ? 'Свернуть' : `Ещё ${hiddenTagsCount}`}
-                </button>
+                    {tagsExpanded ? 'Свернуть' : `Ещё ${hiddenTagsCount}`}
+                  </button>
+                </div>
               </div>
+              <HudTerminal />
             </div>
           </section>
         </FadeIn>

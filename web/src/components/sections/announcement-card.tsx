@@ -169,7 +169,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                 />
               )}
 
-              {item.id === 'syntax-labs' ? (
+              {item.id === 'syntax-labs' || item.name === 'Syntax Labs' ? (
                 /* ── SYNTAX LABS: full-width logo hero ── */
                 <div className="relative z-10 flex flex-col items-center w-full gap-3">
                   {/* Full logo: icon + SYNTAX LABS text */}
@@ -178,7 +178,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                     xmlns="http://www.w3.org/2000/svg"
                     className="w-full h-auto"
                     style={{
-                      maxWidth: '380px',
+                      maxWidth: '100%',
                       filter: `drop-shadow(0 0 20px ${hsl}90) drop-shadow(0 0 40px ${hsl}50)`,
                     }}
                   >
@@ -364,7 +364,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                 style={{ borderTop: `1px solid ${hsl}15` }}>
                 {/* Social links */}
                 <div className="flex items-center gap-0.5">
-                  {item.links.github && (
+                  {item.links?.github && (
                     <motion.a href={item.links.github} target="_blank" rel="noopener noreferrer"
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-white/30"
                       style={{ background: 'rgba(255,255,255,0.04)' }}
@@ -373,7 +373,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                       <GithubLogo size={14} weight="duotone" />
                     </motion.a>
                   )}
-                  {item.links.portfolio && (
+                  {item.links?.portfolio && (
                     <motion.a href={item.links.portfolio} target="_blank" rel="noopener noreferrer"
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-white/30"
                       style={{ background: 'rgba(255,255,255,0.04)' }}
@@ -382,7 +382,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                       <Globe size={14} weight="duotone" />
                     </motion.a>
                   )}
-                  {item.links.telegram && (
+                  {item.links?.telegram && (
                     <motion.a href={item.links.telegram} target="_blank" rel="noopener noreferrer"
                       className="flex h-7 w-7 items-center justify-center rounded-lg text-white/30"
                       style={{ background: 'rgba(255,255,255,0.04)' }}
@@ -394,7 +394,7 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
                 </div>
 
                 <motion.a
-                  href={item.links.telegram ?? `https://t.me/${item.contact.replace('@', '')}`}
+                  href={item.links?.telegram ?? `https://t.me/${(item.contact ?? '').replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group ml-auto flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-bold"

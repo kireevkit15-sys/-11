@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import Image from 'next/image'
 
 import { FadeIn } from '@/components/motion/fade-in'
 import { SectionEyebrow } from '@/components/sections/section-eyebrow'
-import { getCaseStudies, type CaseStudy } from '@/lib/cms'
+import { getCaseStudies, getMediaUrl, type CaseStudy } from '@/lib/cms'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Performance constants
@@ -25,6 +26,7 @@ type CaseItem = {
   did: string
   metric: string
   metricLabel: string
+  logo?: string  // абсолютный URL для next/image, null/undefined → initials
 }
 
 // Fallback — используется если CMS недоступна
@@ -51,6 +53,14 @@ function getInitials(name: string): string {
 
 // Strapi v5: данные приходят напрямую без .attributes
 function caseStudyToCaseItem(cs: CaseStudy): CaseItem {
+  // getMediaUrl возвращает абсолютный URL для внешних, относительный для локальных.
+  // Для next/image ВСЕГДА отдаём то, что в getMediaUrl, БЕЗ префикса origin.
+  // 1) Локальный '/uploads/...' — next/image резолвит в /public/uploads/...
+  //    напрямую, без proxy через /_next/image, без проверки remotePatterns.
+  // 2) Внешний 'https://cdn...' — отдаём как есть, host должен быть в remotePatterns.
+  // Абсолютный URL с localhost в next/image ломается: remotePatterns его не покрывает,
+  // и optimizer возвращает 400. Префикс window.location.origin — антипаттерн.
+  const logo = cs.clientLogoUrl ? getMediaUrl(cs.clientLogoUrl) ?? undefined : undefined;
   return {
     initials: getInitials(cs.title),
     name:     cs.title,
@@ -58,7 +68,8 @@ function caseStudyToCaseItem(cs: CaseStudy): CaseItem {
     did:      cs.task || cs.solution || 'Решена задача клиента',
     metric:   cs.result?.match(/^[\d\.\,×\-\s]+[^\s]{0,8}/)?.[0] || '—',
     metricLabel: 'результат',
-  }
+    logo,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,7 +172,12 @@ function FloatingCard({ item, placement, cardRef, index }: {
   cardRef: (el: HTMLDivElement | null) => void
   index: number
 }) {
-  const p = placement
+  // Guard: если placement не определён (например, race при HMR или
+    // несоответствие длины placements и cases), пропускаем карточку.
+    // Раньше const p = placement без проверки → p.x → TypeError
+    // на главной, если refs/placements рассинхронизированы.
+    if (!placement) return null
+    const p = placement
 
   // Стагированные тайминги: каждая карточка живёт в своём ритме
   const floatDur  = 3.8 + (index % 4) * 0.7   // 3.8–6.5s
@@ -276,10 +292,23 @@ function FloatingCard({ item, placement, cardRef, index }: {
               ...glassChipStyle,
               width: 34, height: 34, borderRadius: 10,
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              overflow: 'hidden',
+              padding: item.logo ? 4 : 0,
             }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.82)' }}>
-                {item.initials}
-              </span>
+              {item.logo ? (
+                <Image
+                  src={item.logo}
+                  alt={item.name}
+                  width={26}
+                  height={26}
+                  sizes="34px"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.82)' }}>
+                  {item.initials}
+                </span>
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2, color: 'rgba(255,255,255,0.88)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -672,8 +701,19 @@ function MarqueeRow({ items, direction, duration }: {
               <p style={{ marginTop:12, fontSize:12, lineHeight:1.6, color:'rgba(255,255,255,0.55)', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{item.did}</p>
               <div style={{ marginTop:14, height:1, background:'rgba(255,255,255,0.07)' }} />
               <div style={{ marginTop:12, display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ ...glassChipStyle, width:32, height:32, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <span style={{ fontFamily:'var(--font-display)', fontSize:9, fontWeight:800, color:'rgba(255,255,255,0.82)' }}>{item.initials}</span>
+                <div style={{ ...glassChipStyle, width:32, height:32, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden', padding: item.logo ? 3 : 0 }}>
+                  {item.logo ? (
+                    <Image
+                      src={item.logo}
+                      alt={item.name}
+                      width={26}
+                      height={26}
+                      sizes="32px"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <span style={{ fontFamily:'var(--font-display)', fontSize:9, fontWeight:800, color:'rgba(255,255,255,0.82)' }}>{item.initials}</span>
+                  )}
                 </div>
                 <div>
                   <p style={{ fontSize:13, fontWeight:600, lineHeight:1.2, color:'rgba(255,255,255,0.88)' }}>{item.name}</p>

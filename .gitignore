@@ -112,3 +112,7 @@ dist/
 
 # Артефакты отладки в web/nul (curl > nul под Windows создаёт файл)
 web/nul
+
+# Host-папка для bind-mount между web и diva-admin контейнерами.
+# Не должна попадать в репо — файлы загружаются в runtime.
+uploads-shared/

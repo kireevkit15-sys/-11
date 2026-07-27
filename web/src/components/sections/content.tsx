@@ -67,7 +67,14 @@ const fallbackVideos: VideoItem[] = [
     id: 'v1',
     channel: 'youtube',
     videoId: '3vvjytkHV3s',
-    cover: 'https://i.ytimg.com/vi/3vvjytkHV3s/maxresdefault.jpg',
+    // Локальное превью: YouTube CDN (img.youtube.com / i.ytimg.com) в РФ
+    // блокируется провайдером, и Next image optimizer таймаутит
+    // ("upstream image response timed out"). Файлы лежат в web/public/videos/
+    // и подтянуты через yt-dlp --write-thumbnail (webp 480×360). При
+    // обновлении видео обновите и превью: yt-dlp --write-thumbnail
+    // --skip-download --convert-thumbnails jpg -o {videoId}
+    // https://youtu.be/{videoId}
+    cover: '/videos/3vvjytkHV3s.webp',
     coverAlt: 'Приветствие основателя ДИВА',
     title: 'О компании ДИВА — бухгалтерия для стартапов',
     description: 'Приветственное видео от основателя: чем занимается ДИВА и почему мы специализируемся на ФСИ.',
@@ -78,7 +85,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v2',
     channel: 'youtube',
     videoId: '8wd_Wjk_GKI',
-    cover: 'https://i.ytimg.com/vi/8wd_Wjk_GKI/maxresdefault.jpg',
+    cover: '/videos/8wd_Wjk_GKI.webp',
     coverAlt: 'Все шаги студенческого стартапа',
     title: 'Все шаги для успешного выполнения студенческого стартапа',
     description: 'Пошаговый разбор: от подписания договора с ФСИ до закрытия отчётности.',
@@ -89,7 +96,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v3',
     channel: 'youtube',
     videoId: 'IhXATjZh-Kg',
-    cover: 'https://i.ytimg.com/vi/IhXATjZh-Kg/maxresdefault.jpg',
+    cover: '/videos/IhXATjZh-Kg.webp',
     coverAlt: 'Где найти деньги на развитие проекта',
     title: 'Где ещё найти деньги на проект после студенческого стартапа',
     description: 'Три направления для привлечения финансирования, которые работают на практике.',
@@ -100,7 +107,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v4',
     channel: 'youtube',
     videoId: 'dULyMhgdsLo',
-    cover: 'https://i.ytimg.com/vi/dULyMhgdsLo/maxresdefault.jpg',
+    cover: '/videos/dULyMhgdsLo.webp',
     coverAlt: 'Почему с бухгалтером проще',
     title: 'Почему с бухгалтером проще, чем с автоматизированными сервисами',
     description: 'Живой бухгалтер снимает риски и берёт на себя ответственность — сервисы этого не делают.',
@@ -111,7 +118,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v5',
     channel: 'youtube',
     videoId: 'Z3Rlm9J_wSQ',
-    cover: 'https://i.ytimg.com/vi/Z3Rlm9J_wSQ/maxresdefault.jpg',
+    cover: '/videos/Z3Rlm9J_wSQ.webp',
     coverAlt: 'Военский учёт организации',
     title: 'Что такое военский учёт организации и как с ним работать',
     description: 'Разбираем обязанности ООО по военскому учёту: документы, сроки, ответственность.',
@@ -122,7 +129,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v6',
     channel: 'youtube',
     videoId: 'DGB5BeL9ESk',
-    cover: 'https://i.ytimg.com/vi/DGB5BeL9ESk/maxresdefault.jpg',
+    cover: '/videos/DGB5BeL9ESk.webp',
     coverAlt: 'Бизнес-план для студенческого стартапа',
     title: 'Что такое бизнес-план для студенческого стартапа и из чего он состоит',
     description: 'Структура бизнес-плана для гранта ФСИ: что проверяют кураторы и как не получить замечания.',
@@ -133,7 +140,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v7',
     channel: 'youtube',
     videoId: 'jFu5iLw1W1A',
-    cover: 'https://i.ytimg.com/vi/jFu5iLw1W1A/maxresdefault.jpg',
+    cover: '/videos/jFu5iLw1W1A.webp',
     coverAlt: 'Популярные вопросы по ФСИ',
     title: 'Популярные вопросы по работе с ФСИ — отвечает эксперт ДИВА',
     description: 'Разбираем самые частые вопросы грантополучателей: отчётность, договор, финансирование.',
@@ -160,19 +167,18 @@ const iconColors: Record<string, { main: string; bg: string; glow: string }> = {
   rutube: { main: '#3B82F6', bg: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)' },
 }
 
-function getYouTubeThumbnailCandidates(videoId: string): string[] {
-  return [
-    `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-    `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-    `https://img.youtube.com/vi/${videoId}/default.jpg`,
-    `https://img.youtube.com/vi/${videoId}/sddefault.jpg`,
-    `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-  ]
-}
-
 function getVideoThumbnailCandidates(video: VideoItem): string[] {
-  if (video.channel === 'youtube') return getYouTubeThumbnailCandidates(video.videoId)
-  return [video.cover]
+  // Если у видео задан локальный cover (/videos/...) или полный http(s)-URL
+  // из БД — пробуем его первым. YouTube CDN (img.youtube.com / i.ytimg.com)
+  // недоступен из РФ, и Next image optimizer таймаутит с ошибкой
+  // "upstream image response timed out" — раньше это заставляло рендерить
+  // Play-кружок на пустом фоне вместо превью. Локальный файл из
+  // /public/videos/ грузится мгновенно. Если БД не задала thumbnailUrl —
+  // используется fallback-обложка VideoThumbnailFallback.
+  if (video.cover) return [video.cover]
+  // Если cover пустой — fallback отрисуется сразу (coverIndex = 0,
+  // coverFailed = true при первом рендере)
+  return []
 }
 
 // ============================================================================
@@ -601,6 +607,19 @@ function Video3DCard({ video, index, onPlay }: { video: VideoItem; index: number
             <div className="relative aspect-video overflow-hidden">
               {coverFailed ? (
                 <VideoThumbnailFallback video={video} />
+              ) : coverSrc.startsWith('/') ? (
+                // Локальный путь (/public/videos/...) — обходим next/image, потому что
+                // в Next 15 dev image optimizer иногда не подхватывает файлы из
+                // директорий, добавленных после старта контейнера, и 404-ит даже
+                // при живых файлах на диске. <img> берёт файл напрямую с dev-сервера.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={coverSrc}
+                  alt={video.coverAlt}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ transform: hovered ? 'scale(1.08)' : 'scale(1)', transition: 'transform 0.6s ease' }}
+                  onError={() => setCoverIndex((current) => current + 1)}
+                />
               ) : (
                 <Image
                   src={coverSrc}
@@ -756,7 +775,11 @@ function convertCmsVideos(cmsVideos: VideoFromCMS[]): VideoItem[] {
     id: String(idx),
     channel: v.platform === 'rutube' ? 'rutube' : 'youtube',
     videoId: v.videoId,
-    cover: v.thumbnailUrl || `https://i.ytimg.com/vi/${v.videoId}/maxresdefault.jpg`,
+    // Если thumbnailUrl не задан в админке — оставляем пустую строку,
+    // чтобы сработал VideoThumbnailFallback. YouTube CDN
+    // (i.ytimg.com / img.youtube.com) в РФ заблокирован, и Next image
+    // optimizer таймаутит ("upstream image response timed out").
+    cover: v.thumbnailUrl || '',
     coverAlt: v.title,
     title: v.title,
     description: v.description || '',
