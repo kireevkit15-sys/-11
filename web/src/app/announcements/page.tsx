@@ -51,6 +51,11 @@ export default async function AnnouncementsPage() {
     featured: r.featured ?? false,
     // DB хранит произвольный текст; на UI ожидается enum-категория.
     category: normalizeCategory(r.category),
+    // Множественные категории для фильтров на сайте. Гарантируем массив
+    // и фильтруем только строки (защита от мусора в jsonb).
+    categories: Array.isArray(r.categories)
+      ? r.categories.filter((c): c is string => typeof c === 'string')
+      : [],
   }))
 
   return <AnnouncementsView initialPartners={initialPartners} />

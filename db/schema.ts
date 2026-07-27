@@ -738,6 +738,11 @@ export const partners = pgTable(
     available: boolean('available').notNull().default(true),
     featured: boolean('featured').notNull().default(false),
     category: text('category').notNull().default('fullstack'),
+    // Множественные категории для фильтрации на сайте (/announcements).
+    // Содержит строки из фиксированного списка partnerTags
+    // (web/src/data/partners.ts): «Разработка сайтов», «Разработка
+    // мобильных приложений» и т.д. Пустой массив = показывается во «все».
+    categories: jsonb('categories').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

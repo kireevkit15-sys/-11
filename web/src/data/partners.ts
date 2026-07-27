@@ -25,6 +25,14 @@ export type Partner = {
   available: boolean;
   featured?: boolean;
   category: 'fullstack' | 'mobile' | 'ai' | 'devops' | 'design' | 'other';
+  /**
+   * Множественные категории для фильтров на /announcements.
+   * Строки из фиксированного списка `partnerTags` ниже
+   * («Разработка сайтов», «Разработка мобильных приложений» и т.д.).
+   * Партнёр может принадлежать нескольким категориям. Пустой массив —
+   * партнёр виден только во «все» и ни в одном фильтре.
+   */
+  categories?: string[];
 }
 
 export const partners: Partner[] = [
@@ -45,6 +53,7 @@ export const partners: Partner[] = [
     available: true,
     featured: true,
     category: 'fullstack',
+    categories: ['Разработка сайтов', 'Разработка мобильных приложений', 'Разработка ботов и ассистентов', 'Машинное обучение и нейросети'],
   },
 ];
 

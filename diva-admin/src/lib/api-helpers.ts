@@ -180,6 +180,21 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown>): 
         }
         break;
       }
+      case 'multiselect': {
+        // Массив строк, но только из разрешённого field.options. Любые
+        // значения вне списка отбрасываем — это защита от подделки
+        // запроса (масс-assignment произвольных категорий).
+        const allowed = new Set(field.options ?? []);
+        const rawArr = Array.isArray(value)
+          ? value
+          : typeof value === 'string' && value.trim() !== ''
+            ? value.split('\n').map((v) => v.trim()).filter(Boolean)
+            : [];
+        data[field.name] = rawArr
+          .map((v) => String(v))
+          .filter((v) => allowed.has(v));
+        break;
+      }
       default: {
         // text / textarea / select / image
         const s = value === null || value === undefined ? '' : String(value).trim();

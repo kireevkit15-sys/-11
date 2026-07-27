@@ -67,6 +67,7 @@ export type ServerPartner = {
   available: boolean;
   featured: boolean | null;
   category: string;
+  categories: string[];
   sortOrder: number;
 };
 
@@ -99,6 +100,7 @@ export const getServerPartners = cache(async (): Promise<ServerPartner[]> => {
         available: partners.available,
         featured: partners.featured,
         category: partners.category,
+        categories: partners.categories,
         sortOrder: partners.sortOrder,
       })
       .from(partners)

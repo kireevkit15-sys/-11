@@ -344,7 +344,10 @@ function RobotNeonRing() {
 
 export function AnnouncementsView({ initialPartners }: { initialPartners: Partner[] }) {
   const reduced = useReducedMotion()
-  const [activeCategory] = useState<Partner['category'] | 'all'>('all')
+  // Активная категория-фильтр. null = «все». Клик по тегу выбирает его,
+  // повторный клик — снимает. Значение — строка из partnerTags
+  // («Разработка сайтов», ...). Фильтр идёт по partner.categories[].
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [tagsExpanded, setTagsExpanded] = useState(false)
 
   // Партнёры приходят из RSC (server-component обёртка app/announcements/page.tsx).
@@ -353,18 +356,38 @@ export function AnnouncementsView({ initialPartners }: { initialPartners: Partne
   const partnersData = initialPartners
   const partnerTagsData = staticTags
 
+  // Теги, реально используемые хотя бы у одного партнёра — чтобы не
+  // показывать пустые фильтры. Если партнёры без categories, показываем
+  // все partnerTags (как раньше), чтобы секция не была пустой.
+  const usedTags = useMemo(() => {
+    const used = new Set<string>()
+    for (const p of partnersData) {
+      if (Array.isArray(p.categories)) {
+        for (const c of p.categories) used.add(c)
+      }
+    }
+    return used
+  }, [partnersData])
+  const hasAnyCategories = usedTags.size > 0
+
   const visibleTags = tagsExpanded ? partnerTagsData : partnerTagsData.slice(0, 6)
   const hiddenTagsCount = partnerTagsData.length - visibleTags.length
 
   const filtered = useMemo(() => {
-    return partnersData.filter((a) => {
-      return activeCategory === 'all' || a.category === activeCategory
-    })
+    if (activeCategory === null) return partnersData
+    return partnersData.filter((p) =>
+      Array.isArray(p.categories) && p.categories.includes(activeCategory),
+    )
   }, [partnersData, activeCategory])
 
   const visiblePartners = filtered
-  // Пустой фильтр (например, выбрали категорию, в которой пока нет никого).
-  const showLoadingCard = visiblePartners.length === 0 && activeCategory !== 'all'
+  // Пустой фильтр (выбрали категорию, в которой пока нет партнёров).
+  const showLoadingCard = visiblePartners.length === 0 && activeCategory !== null
+
+  // Клик по тегу: если уже активен — снимаем, иначе выбираем.
+  const toggleTag = (tag: string) => {
+    setActiveCategory((cur) => (cur === tag ? null : tag))
+  }
 
   return (
     <div className="relative min-h-screen noise-overlay -mt-[80px] pt-[80px] sm:-mt-[88px] sm:pt-[88px]" style={{ backgroundColor: 'var(--brand-ink)' }}>
@@ -518,15 +541,32 @@ export function AnnouncementsView({ initialPartners }: { initialPartners: Partne
                   <span className="font-mono text-[10px] text-white/50" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9)' }}>{partnersData.length} команд · обновлено сегодня</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {visibleTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/60"
-                      style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  {visibleTags.map((tag) => {
+                    const isActive = activeCategory === tag
+                    // Тускнеем, если есть партнёры с categories и этот тег
+                    // ни у кого не используется — визуальный сигнал, что
+                    // фильтр пустой.
+                    const dim = hasAnyCategories && !usedTags.has(tag)
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        aria-pressed={isActive}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] transition',
+                          isActive
+                            ? 'border-brand-soft bg-brand-soft/20 text-brand-soft shadow-[0_0_18px_rgba(167,139,250,0.35)]'
+                            : dim
+                              ? 'border-white/10 bg-black/25 text-white/30 hover:text-white/60'
+                              : 'border-white/15 bg-black/35 text-white/60 hover:border-brand-soft/40 hover:text-white',
+                        )}
+                        style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                      >
+                        {tag}
+                      </button>
+                    )
+                  })}
                   <button
                     type="button"
                     onClick={() => setTagsExpanded((value) => !value)}
@@ -535,6 +575,16 @@ export function AnnouncementsView({ initialPartners }: { initialPartners: Partne
                   >
                     {tagsExpanded ? 'Свернуть' : `Ещё ${hiddenTagsCount}`}
                   </button>
+                  {activeCategory !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveCategory(null)}
+                      className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/70 transition hover:bg-white/[0.12]"
+                      style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+                    >
+                      ✕ Сбросить
+                    </button>
+                  )}
                 </div>
               </div>
               <HudTerminal />

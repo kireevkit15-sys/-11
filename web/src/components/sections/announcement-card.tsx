@@ -376,6 +376,30 @@ export function AnnouncementCard({ item }: { item: Partner; featured?: boolean }
               {/* Bio */}
               <p className="relative z-10 text-[12px] leading-[1.7] text-white/50 line-clamp-3">{item.bio}</p>
 
+              {/* Категории (фильтры сайта) — маленькие пилюли, визуально
+                  отличаются от скиллов: сплошная заливка цветом карточки. */}
+              {item.categories && item.categories.length > 0 && (
+                <div className="relative z-10 flex flex-wrap gap-1.5">
+                  {item.categories.slice(0, 4).map((cat) => (
+                    <span
+                      key={cat}
+                      className="rounded-md px-2 py-0.5 text-[10px] font-medium leading-tight text-white/90"
+                      style={{
+                        background: `${hsl}22`,
+                        boxShadow: `inset 0 0 0 1px ${hsl}45`,
+                      }}
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                  {item.categories.length > 4 && (
+                    <span className="rounded-md px-2 py-0.5 text-[10px] font-medium leading-tight text-white/40">
+                      +{item.categories.length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Skills grid */}
               <div className="relative z-10 flex flex-wrap gap-1.5">
                 {item.skills.slice(0, 6).map((skill, i) => (

@@ -12,7 +12,7 @@ import { useToast } from '@/components/providers';
 type FormState = Record<string, string | boolean | string[]>;
 
 function emptyValue(field: FieldConfig): string | boolean | string[] {
-  if (field.type === 'list') return [];
+  if (field.type === 'list' || field.type === 'multiselect') return [];
   if (field.type === 'checkbox') {
     // Для checkbox defaultValue имеет смысл только boolean.
     if (field.defaultValue === true) return true;
@@ -25,7 +25,9 @@ function emptyValue(field: FieldConfig): string | boolean | string[] {
 }
 
 function toFormValue(field: FieldConfig, raw: unknown): string | boolean | string[] {
-  if (field.type === 'list') return Array.isArray(raw) ? raw.map(String) : [];
+  if (field.type === 'list' || field.type === 'multiselect') {
+    return Array.isArray(raw) ? raw.map(String) : [];
+  }
   if (field.type === 'json') {
     if (raw === null || raw === undefined || raw === '') return '';
     return typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2);
@@ -112,6 +114,17 @@ export function EntityForm({ entity, id }: { entity: ClientEntity; id?: string }
 
   const removeListItem = (name: string, idx: number) => {
     set(name, ((form[name] as string[]) || []).filter((_, i) => i !== idx));
+  };
+
+  // Multiselect: toggle значения в массиве (добавить/убрать). Хранится
+  // как string[], в БД уходит jsonb-массивом. Порядок выбора сохраняется.
+  const toggleMultiselect = (name: string, opt: string) => {
+    const cur = (form[name] as string[]) || [];
+    if (cur.includes(opt)) {
+      set(name, cur.filter((v) => v !== opt));
+    } else {
+      set(name, [...cur, opt]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -230,6 +243,34 @@ export function EntityForm({ entity, id }: { entity: ClientEntity; id?: string }
                     </option>
                   ))}
                 </select>
+              ) : field.type === 'multiselect' ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {field.options?.map((opt) => {
+                      const selected = ((form[field.name] as string[]) || []).includes(opt);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => toggleMultiselect(field.name, opt)}
+                          className={
+                            selected
+                              ? 'rounded-full border border-brand-500 bg-brand-500/15 px-3 py-1.5 text-xs font-medium text-brand-700 dark:text-brand-200'
+                              : 'rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-brand-400 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }
+                        >
+                          {selected && <span className="mr-1">✓</span>}
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {((form[field.name] as string[]) || []).length === 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Ничего не выбрано — партнёр будет виден только во «все».
+                    </p>
+                  )}
+                </div>
               ) : field.type === 'checkbox' ? (
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
