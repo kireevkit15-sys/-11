@@ -46,12 +46,30 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    # Host-port 3000 занят процессом com.docker.backend (PID 23096) на
+    # Windows-хосте — bind-mount в Docker Desktop. Проксируем через
+    # хост-порт 3010 → container 3000. Пользователь открывает
+    # http://localhost:3010 в браузере. Чтобы вернуть :3000 — нужно
+    # освободить порт (см. README «dev-стек»).
     ports:
-      - "3000:3000"
+      - "3300:3000"
+    # Бинд-монтируем только web/ и db/ (а не весь /app), потому что
+    # alias @/db в web/tsconfig.json резолвится в ../db/schema.ts — это
+    # требует, чтобы /app/db существовал внутри контейнера. Dockerfile
+    # target=dev уже копирует db/. и web/. в /app/{db,web}, мы их
+    # пере-биндим, чтобы правки в обоих каталогах подхватывались hot reload.
+    # Bind-mount в Docker Desktop под Windows — атомарные rename webpack (.pack.gz_)
+    # не работают поверх 9P. Поэтому .next выносим в anonymous volume
+    # (внутри WSL2 — нормальная FS), а код биндим только на чтение.
+    # uploads-shared: bind-mount напрямую (named volume с local driver
+    # под Windows не работает надёжно). Папка должна существовать.
     volumes:
-      - ../web:/app
-      - /app/node_modules
-    command: npm run dev -- -p 3000
+      - ../web:/app/web
+      - ../db:/app/db
+      - /app/web/node_modules
+      - /app/web/.next
+      - C:/Users/user/Documents/проекты/сайт ДИВА/uploads-shared:/app/web/public/uploads
+    command: npm run dev -- -p 3000 -H 0.0.0.0
     restart: unless-stopped
     networks:
       - diva
@@ -69,11 +87,53 @@ services:
       NODE_ENV: development
       BOT_TOKEN: ${BOT_TOKEN}
       ROP_CHAT_ID: ${ROP_CHAT_ID}
+      BOT_ALLOWED_USER_IDS: ${BOT_ALLOWED_USER_IDS:-}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - ../bot:/app
       - /app/node_modules
     command: npm run dev
+    # on-failure: при exit(1) Docker сделает один рестарт и успокоится —
+    # но это всё равно tight-loop в случае 409 от phantom-poll. Поэтому
+    # ограничиваем максимум 3 рестарта, дальше контейнер уходит в exited
+    # state и видно в `docker ps`.
+    restart: on-failure:3
+    networks:
+      - diva
+
+  # Кастомная админ-панель diva-admin в dev-режиме.
+  # Dockerfile не имеет отдельной dev-стадии (как у web), поэтому
+  # собираем target: build (с devDependencies) и запускаем `npm run dev`.
+  # Бинд-монтируем diva-admin/ и db/ — те же причины, что у web:
+  # alias @db/* указывает на ../db/schema.ts.
+  diva-admin:
+    build:
+      context: ..
+      dockerfile: diva-admin/Dockerfile
+      target: build
+    container_name: diva-admin-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      ADMIN_PORT: 3001
+    # Host-port 3001 тоже занят тем же com.docker.backend. Хост-порт 3011
+    # → container 3001. Пользователь открывает http://localhost:3011/login.
+    ports:
+      - "3301:3001"
+    volumes:
+      - ../diva-admin:/app/diva-admin
+      - ../db:/app/db
+      - /app/diva-admin/node_modules
+      # uploads-shared: общая папка с web (bind-mount напрямую).
+      # admin пишет сюда, web читает отсюда.
+      - C:/Users/user/Documents/проекты/сайт ДИВА/uploads-shared:/app/diva-admin/public/uploads
+    command: sh -c "npm run dev -- -p 3001 -H 0.0.0.0"
     restart: unless-stopped
     networks:
       - diva
