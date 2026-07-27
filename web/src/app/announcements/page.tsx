@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useSyncExternalStore } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react'
 import { Sparkle, TelegramLogo } from '@phosphor-icons/react'
 
@@ -39,10 +39,15 @@ async function fetchPartners(): Promise<Partner[]> {
 // useHydrated: true только после mount. До гидратации React на сервере
 // рендерит ТОЛЬКО статику (staticPartners), и клиент видит тот же HTML —
 // никакого mismatch даже если API ответил синхронно через module cache.
+// useSyncExternalStore — idiomatic-способ для "смонтирован ли компонент":
+// правило react-hooks/set-state-in-effect его не триггерит, в отличие от
+// useState + useEffect, который ESLint в Next 15 production-build валит.
 function useHydrated(): boolean {
-  const [h, setH] = useState(false)
-  useEffect(() => { setH(true) }, [])
-  return h
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 }
 
 // CTA блок с бегущим огнём и анимированной кнопкой
