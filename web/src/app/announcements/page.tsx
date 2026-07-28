@@ -23,6 +23,15 @@ import { AnnouncementsView } from './announcements-view'
 
 // Server-component children могут быть Promise<...> в React 19 — но в Next.js
 // 15 мы используем обычный async/await: данные приходят до возврата JSX.
+
+// Страница должна рендериться на каждый запрос, а не закэшироваться в
+// build-time статикой. Иначе Next рендерит RSC на этапе `next build` без
+// DATABASE_URL (БД доступна только в runtime), getServerPartners() падает
+// в catch (return []), и страница кешируется ПУСТОЙ — даже если в БД
+// уже есть партнёры. С force-dynamic RSC выполняется при каждом заходе
+// пользователя, что и нужно для динамического контента.
+export const dynamic = 'force-dynamic'
+
 export default async function AnnouncementsPage() {
   const rows = await getServerPartners()
 

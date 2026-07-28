@@ -1,0 +1,16 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "id": "0005_partners_categories",
+  "prevIds": [
+    "0004_announcements_image"
+  ],
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}
