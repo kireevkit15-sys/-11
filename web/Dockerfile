@@ -41,7 +41,7 @@ RUN npm run build
 
 # ---------- runner ----------
 FROM node:22-alpine AS runner
-WORKDIR /app
+WORKDIR /app/web
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOST=0.0.0.0
@@ -55,14 +55,19 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Next standalone (монорепо): server.js под web/, public + static рядом
-COPY --from=build /app/web/public ./web/public
-COPY --from=build --chown=nextjs:nodejs /app/web/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/web/.next/static ./web/.next/static
+# Не используем output: 'standalone': Next.js 15 в монорепо с
+# outputFileTracingRoot: ../db не генерирует standalone-бандл целиком
+# (на VPS .next/standalone содержал только package.json, без server.js —
+# контейнер падал на "Cannot find module '/app/web/server.js'").
+# Вместо этого копируем полные node_modules + .next и запускаем через
+# `next start`. Образ получается ~300 МБ, но это надёжно.
+COPY --from=deps /app/web/node_modules ./node_modules
+COPY --from=build /app/web/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/web/.next ./.next
 
 # каталог под общий volume загрузок
 RUN mkdir -p /app/web/public/uploads && chown -R nextjs:nodejs /app/web/public
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "web/server.js"]
+CMD ["npx", "next", "start", "-p", "3000", "-H", "0.0.0.0"]
