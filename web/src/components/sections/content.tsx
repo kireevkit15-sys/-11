@@ -70,11 +70,11 @@ const fallbackVideos: VideoItem[] = [
     // Локальное превью: YouTube CDN (img.youtube.com / i.ytimg.com) в РФ
     // блокируется провайдером, и Next image optimizer таймаутит
     // ("upstream image response timed out"). Файлы лежат в web/public/videos/
-    // и подтянуты через yt-dlp --write-thumbnail (webp 480×360). При
-    // обновлении видео обновите и превью: yt-dlp --write-thumbnail
-    // --skip-download --convert-thumbnails jpg -o {videoId}
-    // https://youtu.be/{videoId}
-    cover: '/videos/3vvjytkHV3s.webp',
+    // и подтянуты через yt-dlp --write-thumbnail (jpg). При обновлении
+    // видео обновите и превью:
+    //   yt-dlp --write-thumbnail --skip-download --convert-thumbnails jpg \
+    //     -o {videoId} https://youtu.be/{videoId}
+    cover: '/videos/3vvjytkHV3s.jpg',
     coverAlt: 'Приветствие основателя ДИВА',
     title: 'О компании ДИВА — бухгалтерия для стартапов',
     description: 'Приветственное видео от основателя: чем занимается ДИВА и почему мы специализируемся на ФСИ.',
@@ -85,7 +85,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v2',
     channel: 'youtube',
     videoId: '8wd_Wjk_GKI',
-    cover: '/videos/8wd_Wjk_GKI.webp',
+    cover: '/videos/8wd_Wjk_GKI.jpg',
     coverAlt: 'Все шаги студенческого стартапа',
     title: 'Все шаги для успешного выполнения студенческого стартапа',
     description: 'Пошаговый разбор: от подписания договора с ФСИ до закрытия отчётности.',
@@ -96,7 +96,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v3',
     channel: 'youtube',
     videoId: 'IhXATjZh-Kg',
-    cover: '/videos/IhXATjZh-Kg.webp',
+    cover: '/videos/IhXATjZh-Kg.jpg',
     coverAlt: 'Где найти деньги на развитие проекта',
     title: 'Где ещё найти деньги на проект после студенческого стартапа',
     description: 'Три направления для привлечения финансирования, которые работают на практике.',
@@ -107,7 +107,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v4',
     channel: 'youtube',
     videoId: 'dULyMhgdsLo',
-    cover: '/videos/dULyMhgdsLo.webp',
+    cover: '/videos/dULyMhgdsLo.jpg',
     coverAlt: 'Почему с бухгалтером проще',
     title: 'Почему с бухгалтером проще, чем с автоматизированными сервисами',
     description: 'Живой бухгалтер снимает риски и берёт на себя ответственность — сервисы этого не делают.',
@@ -118,7 +118,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v5',
     channel: 'youtube',
     videoId: 'Z3Rlm9J_wSQ',
-    cover: '/videos/Z3Rlm9J_wSQ.webp',
+    cover: '/videos/Z3Rlm9J_wSQ.jpg',
     coverAlt: 'Военский учёт организации',
     title: 'Что такое военский учёт организации и как с ним работать',
     description: 'Разбираем обязанности ООО по военскому учёту: документы, сроки, ответственность.',
@@ -129,7 +129,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v6',
     channel: 'youtube',
     videoId: 'DGB5BeL9ESk',
-    cover: '/videos/DGB5BeL9ESk.webp',
+    cover: '/videos/DGB5BeL9ESk.jpg',
     coverAlt: 'Бизнес-план для студенческого стартапа',
     title: 'Что такое бизнес-план для студенческого стартапа и из чего он состоит',
     description: 'Структура бизнес-плана для гранта ФСИ: что проверяют кураторы и как не получить замечания.',
@@ -140,7 +140,7 @@ const fallbackVideos: VideoItem[] = [
     id: 'v7',
     channel: 'youtube',
     videoId: 'jFu5iLw1W1A',
-    cover: '/videos/jFu5iLw1W1A.webp',
+    cover: '/videos/jFu5iLw1W1A.jpg',
     coverAlt: 'Популярные вопросы по ФСИ',
     title: 'Популярные вопросы по работе с ФСИ — отвечает эксперт ДИВА',
     description: 'Разбираем самые частые вопросы грантополучателей: отчётность, договор, финансирование.',
