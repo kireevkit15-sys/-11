@@ -381,8 +381,10 @@ export function AnnouncementsView({ initialPartners }: { initialPartners: Partne
   }, [partnersData, activeCategory])
 
   const visiblePartners = filtered
-  // Пустой фильтр (выбрали категорию, в которой пока нет партнёров).
-  const showLoadingCard = visiblePartners.length === 0 && activeCategory !== null
+  // Виджет «Подбираем новых исполнителей» показывается всегда, пока есть
+  // хотя бы один видимый партнёр. Скрываем только когда фильтр активен
+  // и результат пуст (там показывается «Ничего не найдено»).
+  const showLoadingCard = visiblePartners.length > 0
 
   // Клик по тегу: если уже активен — снимаем, иначе выбираем.
   const toggleTag = (tag: string) => {
