@@ -12,10 +12,19 @@
  * В production пишем в console.error (сборщик логов подхватит).
  * НЕ делаем process.exit(1) после unhandledRejection — Next runtime сам решает,
  * когда упасть, иначе можно прервать обработку текущего запроса на полпути.
+ *
+ * ВАЖНО: если в проекте есть middleware.ts, Next.js пытается зарегистрировать
+ * instrumentation в Edge runtime — а там `process` недоступен, и без явного
+ * `runtime = 'nodejs'` модуль упадёт на этапе сборки / загрузки с ошибкой
+ * "process.on is not a function". Поэтому фиксируем runtime явно и
+ * дополнительно защищаемся проверкой `typeof process !== 'undefined'`.
  */
 
+export const runtime = 'nodejs';
+
 export async function register() {
-  if (process.env.NODE_ENV === 'development') {
+  if (typeof process === 'undefined') return;
+  if (process.env?.NODE_ENV === 'development') {
     return; // dev-режим достаточно тихий, не дублируем вывод
   }
 
