@@ -34,6 +34,13 @@
   --color-cream-200: #e7e5e4;
   --color-cream-300: #d6d3d1;
 
+  /* Токены для gradient stops в login + admin-shell.
+   * Tailwind v4 не генерирует `from-[#hex]` arbitrary values
+   * для gradient stops — известный баг. Объявляем named-токены. */
+  --color-deep-bg-1: #1a1a2e;
+  --color-deep-bg-2: #16213e;
+  --color-deep-bg-3: #0f0f23;
+
   --font-sans: var(--font-inter), "Inter", "Roboto", "Helvetica Neue", "Arial", sans-serif;
   --radius: 0.625rem;
 }

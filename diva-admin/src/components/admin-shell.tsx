@@ -140,7 +140,7 @@ export function AdminShell({
 
       <aside
         className={cn(
-          'fixed left-0 top-0 bottom-0 z-50 flex w-64 flex-col bg-gradient-to-b from-[#1a1a2e] to-[#0f0f23] text-white transition-transform duration-300 lg:translate-x-0',
+          'fixed left-0 top-0 bottom-0 z-50 flex w-64 flex-col bg-gradient-to-b from-deep-bg-1 to-deep-bg-3 text-white transition-transform duration-300 lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
