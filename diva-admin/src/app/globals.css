@@ -1,23 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Tailwind v4: @source MUST be quoted — `@source "..."` или `@source inline("...")`.
- * Без кавычек v4 игнорирует директиву и тихо собирает CSS только из
- * default-утилит — без классов из наших компонентов. В standalone-build
- * файл `.next/static/css/*.css` получается ~24 КБ (только шрифты плюс одна
- * shadow-утилита), и админка рендерится без стилей.
- *
- * `globals.css` лежит в `src/app/`, файлы .tsx/.ts — в `src/`.
- * Хвост `**` и glob `{ts,tsx,js,jsx}` Next 15 standalone + lightningCSS
- * оптимизатор при сборке «съедает» (видели как готовый CSS получал
- * `@source ".. *.ts"` без `**` и без фигурных скобок). Поэтому
- * перечисляем расширения отдельными строками и используем `**`
- * как одиночный шаблон без `{}`.
+ * Источники классов указаны в postcss.config.mjs через опцию `paths`.
+ * Здесь @source НЕ используем — Next 15 standalone-build теряет `**`
+ * из пути при обработке CSS, и Tailwind не находит ни одного файла.
  */
-@source "../**/*.ts";
-@source "../**/*.tsx";
-@source "../**/*.js";
-@source "../**/*.jsx";
 
 /* Тёмная тема — class-based (переключатель на .dark у <html>). */
 @custom-variant dark (&:where(.dark, .dark *));
