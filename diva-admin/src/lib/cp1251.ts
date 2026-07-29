@@ -60,7 +60,7 @@ function getCp1251Decoder(): TextDecoder {
   return cp1251Decoder;
 }
 
-function tryParseJson(s: string): unknown {
+function tryParseJson(s: string): unknown | undefined {
   try {
     return JSON.parse(s);
   } catch {
@@ -72,25 +72,25 @@ function tryParseJson(s: string): unknown {
  * Читает тело запроса с авто-детектом кодировки (UTF-8 → cp1251).
  * Возвращает распарсенный JSON или undefined, если ни одна кодировка не дала валидный JSON.
  */
-export async function readJsonBody<T = unknown>(req: Request): Promise<T | undefined> {
+export async function readJsonBody<T = Record<string, unknown>>(req: Request): Promise<T> {
   // 1) UTF-8
   const utf8Text = await req.text();
   const utf8Parsed = tryParseJson(utf8Text);
-  if (utf8Parsed !== undefined) return utf8Parsed;
+  if (utf8Parsed !== undefined) return utf8Parsed as T;
 
   // 2) cp1251 fallback
   try {
     const buf = new Uint8Array(await req.arrayBuffer());
     const cp1251Text = getCp1251Decoder().decode(buf);
     const cpParsed = tryParseJson(cp1251Text);
-    if (cpParsed !== undefined) return cpParsed;
+    if (cpParsed !== undefined) return cpParsed as T;
 
     // 3) Ручной декодер (на случай если TextDecoder неожиданно упал)
     const manualText = decodeCp1251(buf);
     const manualParsed = tryParseJson(manualText);
-    return manualParsed;
+    return (manualParsed ?? {}) as T;
   } catch {
-    return undefined;
+    return {} as T;
   }
 }
 

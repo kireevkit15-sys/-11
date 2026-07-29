@@ -124,12 +124,13 @@ export interface CoerceResult {
  * - list — массив строк (jsonb).
  * Проверяет обязательные поля.
  */
-export function coerceBody(entity: EntityConfig, raw: Record<string, unknown>): CoerceResult {
+export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | null | undefined): CoerceResult {
   const data: Record<string, unknown> = {};
+  const src = raw ?? {};
 
   for (const field of entity.fields) {
     if (SYSTEM_FIELDS.has(field.name)) continue;
-    const value = raw[field.name];
+    const value = src[field.name];
 
     switch (field.type) {
       case 'checkbox': {

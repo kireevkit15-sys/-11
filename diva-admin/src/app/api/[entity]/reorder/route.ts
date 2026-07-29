@@ -16,6 +16,7 @@ import { getEntity } from '@/lib/entities';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
 import { revalidateFromEntity } from '@/lib/revalidate-web';
+import { readJsonBody } from '@/lib/cp1251';
 
 export async function POST(
   request: NextRequest,
@@ -33,7 +34,7 @@ export async function POST(
   if (!hasSortOrder) return jsonError('Сущность не поддерживает сортировку', 400);
 
   try {
-    const raw = (await request.json()) as { ids?: unknown };
+    const raw = await readJsonBody<{ ids?: unknown }>(request);
     const ids = Array.isArray(raw.ids) ? raw.ids.map((v) => String(v)) : null;
     if (!ids || ids.length === 0) return jsonError('Ожидается непустой массив ids', 400);
 
