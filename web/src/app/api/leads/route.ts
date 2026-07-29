@@ -207,15 +207,11 @@ export async function POST(req: NextRequest) {
       referer: referer?.slice(0, 240) ?? null,
     })
 
-    const botUrl = process.env.BOT_NOTIFY_URL
-    if (botUrl) {
-      await fetch(botUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(lead),
-      }).catch((error) => console.error('[leads] bot notify failed', error))
-    }
-
+    // Уведомление бота — через polling: diva-bot SELECT-ит
+    // `leads WHERE notified=false` каждые ~3с и шлёт карточки в Telegram.
+    // Раньше здесь был fetch в BOT_NOTIFY_URL, но бот этот URL не
+    // слушает — код был мёртвым и только добавлял round-trip в hot-path
+    // формы (мог зависнуть на 5+с если endpoint недоступен).
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[leads] insert failed', error)

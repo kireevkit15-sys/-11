@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard, Keyboard } from 'grammy';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { env } from './env.js';
 import { db, leads, leadNotes, reminders, installShutdown } from './db.js';
 import { formatLeadCard, withStatusFooter, withNotesFooter } from './lead-handler.js';
@@ -478,47 +478,33 @@ const POLL_BACKOFF_MAX_MS = 30_000;
 let pollTimer: NodeJS.Timeout | null = null;
 
 async function pollNewLeads(): Promise<void> {
-  // ВАЖНО: db.select ВНУТРИ try — раньше был снаружи, и сбой БД
-  // уносил весь процесс через unhandledRejection.
-  let claimed: typeof leads.$inferSelect[];
+  // Шаг 1: SELECT только-чтение топ-50 `notified=false`. Если БД
+  // недоступна — bumpBackoff и выход. Запись НЕ делаем.
+  let pending: typeof leads.$inferSelect[];
   try {
-    // M3: атомарный claim. UPDATE ... WHERE id IN (SELECT ... LIMIT 50)
-    // "захватывает" до 50 строк, переводя notified=false → true за один запрос.
-    // Если процесс упадёт между SELECT и UPDATE (старый код), или между
-    // UPDATE и sendMessage (новый код — но уже с другим риском), повторный
-    // poll не выберет эти строки снова. Раньше последовательность
-    // SELECT(50) → loop → UPDATE после каждого sendMessage означала:
-    // падение на 25-й строке → следующий poll заново выбирает ВСЕ 50 →
-    // 24 дубля в Telegram-чате.
-    //
-    // Цена нового подхода: если sendMessage упадёт ПОСЛЕ claim, лид остаётся
-    // с notified=true, но без сообщения в чате. Это починить можно только
-    // ручным re-notify — вероятность низкая, дублей больше нет.
-    //
-    // PostgreSQL не поддерживает UPDATE ... LIMIT N, поэтому используем
-    // CTE: сначала выбираем до 50 id, потом UPDATE WHERE id IN (...) RETURNING *.
-    const claimRows = await db.execute<{ id: string }>(sql`
-      UPDATE leads
-      SET notified = true
-      WHERE id IN (
-        SELECT id FROM leads
-        WHERE notified = false
-        ORDER BY created_at ASC
-        LIMIT 50
-      )
-      RETURNING *
-    `);
-    claimed = (claimRows as unknown as { rows: typeof leads.$inferSelect[] }).rows
-      ?? (claimRows as unknown as typeof leads.$inferSelect[]);
+    pending = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.notified, false))
+      .orderBy(leads.createdAt)
+      .limit(50);
   } catch (err) {
-    console.error('[poll] claim update failed:', err);
+    console.error('[poll] select failed:', err);
     bumpBackoff();
     return;
   }
-  if (claimed.length === 0) return;
 
-  let anySent = false;
-  for (const row of claimed) {
+  if (pending.length === 0) {
+    console.log('[poll] tick pending=0');
+    schedulePoll();
+    return;
+  }
+  console.log(`[poll] tick pending=${pending.length}`);
+
+  let delivered = 0;
+  let failed = 0;
+
+  for (const row of pending) {
     const lead: Lead = {
       id: row.id, name: row.name, contact: row.contact,
       source: row.source, page: row.page,
@@ -529,19 +515,33 @@ async function pollNewLeads(): Promise<void> {
     };
     try {
       await sendLeadToRop(lead);
-      anySent = true;
+      // Шаг 2: только ПОСЛЕ успешной отправки помечаем notified=true.
+      // Если sendMessage упал — строка остаётся notified=false, и
+      // следующий poll подхватит её снова. Это убирает silent claim-loss
+      // из старого кода (где CTE UPDATE ставил notified=true ДО send).
+      try {
+        await db.update(leads).set({ notified: true }).where(eq(leads.id, row.id));
+        console.log(`[lead] delivered id=${row.id} name=${JSON.stringify(lead.name)}`);
+        delivered += 1;
+      } catch (err) {
+        // UPDATE упал, но Telegram-сообщение уже ушло. Не помечаем как
+        // notified — следующий poll прочитает её снова и пришлёт дубль.
+        // Логируем, чтобы можно было заметить и починить БД-сторону.
+        console.error(`[lead] mark-notified failed id=${row.id} (will likely duplicate next poll)`, err);
+        failed += 1;
+      }
     } catch (err) {
-      console.error('[lead] not delivered, will NOT retry (already claimed)', row.id, err);
-      // Любая ошибка → увеличиваем backoff. Telegram 429 уйдёт через минуту,
-      // но каждая неудачная попытка не должна спамить API.
-      // Строка уже notified=true (claimed), retry будет только через ручной
-      // re-notify в админке — это намеренно, чтобы не было дублей.
+      console.error(`[lead] send failed id=${row.id} name=${JSON.stringify(lead.name)}`, err);
       bumpBackoff();
-      // Продолжаем цикл (не return) — может, упадёт только одна запись из-за
-      // временной 429, остальные дойдут.
+      failed += 1;
+      // Продолжаем цикл — может, упала только одна из записей из-за
+      // временного 429, остальные дойдут.
     }
   }
-  if (anySent) resetBackoff();
+
+  console.log(`[poll] cycle done delivered=${delivered} failed=${failed}`);
+  if (delivered > 0 || failed === 0) resetBackoff();
+  else schedulePoll();
 }
 
 function bumpBackoff(): void {
@@ -551,9 +551,10 @@ function bumpBackoff(): void {
 }
 
 function resetBackoff(): void {
-  if (pollState.failures === 0) return;
-  pollState.failures = 0;
-  pollState.backoffMs = 3000;
+  if (pollState.failures > 0) {
+    pollState.failures = 0;
+    pollState.backoffMs = 3000;
+  }
   schedulePoll();
 }
 
@@ -578,8 +579,10 @@ process.on('uncaughtException', (err, origin) => {
 
 async function main(): Promise<void> {
   console.log('diva-bot starting');
-  // ЕДИНСТВЕННОЕ место регистрации SIGINT/SIGTERM. installShutdown в db.ts
-  // примет callback остановки бота и закроет postgres pool после.
+  // Уведомления РОПа: только polling по таблице leads, см. pollNewLeads.
+  // Пуш-канала (HTTP webhook из web/api/leads) нет — не пытаемся слушать
+  // BOT_NOTIFY_URL или аналоги. Это by design: один источник истины — БД.
+  console.log('[bot] notify mode: polling-only (3s tick, leads.notified flag)');
   installShutdown(async () => {
     if (pollTimer) clearTimeout(pollTimer);
     await bot.stop();
