@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
-/* Tailwind v4 автодетектит файлы для сканирования по @tailwindcss/cli.
- * В монорепо с output: "standalone" автодетект не находит diva-admin/src,
- * и в собранном CSS нет utility-классов — админка рендерится без стилей
- * (DEPLOY-BLOCKERS (4).md, замечание 10). Указываем источники явно.
+/*
+ * Tailwind v4: @source MUST be quoted — `@source "..."` или `@source inline("...")`.
+ * Без кавычек v4 игнорирует директиву и тихо собирает CSS только из
+ * default-утилит — без классов из наших компонентов. В standalone-build
+ * файл `.next/static/css/*.css` получается ~24 КБ (только шрифты плюс одна
+ * shadow-утилита), и админка рендерится без стилей.
+ *
+ * `globals.css` лежит в `src/app/`, файлы .tsx/.ts — в `src/`.
+ * Tailwind v4 резолвит `@source` ОТНОСИТЕЛЬНО файла, в котором эта
+ * директива стоит. От `src/app/globals.css` путь до `src/**` —
+ * это ровно `../**`.
  */
 @source "../**/*.{ts,tsx,js,jsx}";
 
