@@ -69,6 +69,10 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # On-demand revalidation: web сверяет x-revalidate-secret с этим
+      # секретом. Без него webhook всегда падает в 401 и ISR не
+      # сбрасывается — сайт показывает старые данные после правок в админке.
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
     volumes:
       - uploads:/app/public/uploads   # общий том загрузок (пишет diva-admin, отдаёт сайт)
     # No external port — Caddy reverse-proxies ${DOMAIN} -> web:3000.
@@ -103,6 +107,12 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       ROP_CHAT_ID: ${ROP_CHAT_ID}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Этот контейнер живёт в Docker-сети без IPv6 маршрутизации наружу.
+      # По умолчанию dns.lookup() в Node предпочитает AAAA (IPv6) записи,
+      # api.telegram.org резолвится в IPv6 первым хопом → ENETUNREACH →
+      # ETIMEDOUT внутри Grammy → лиды "отправляются" но теряются.
+      # Принудительно идём через IPv4.
+      NODE_OPTIONS: --dns-result-order=ipv4first
     restart: unless-stopped
     networks:
       - diva
@@ -127,6 +137,14 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       SESSION_SECRET: ${ADMIN_SESSION_SECRET}
       ADMIN_PORT: 3001
+      # Webhook on-demand revalidation: admin дёргает web после каждой
+      # мутации (POST/PUT/DELETE), чтобы web немедленно сбросил ISR-кеш.
+      # В проде admin и web в одной `diva`-сети — ходим по имени сервиса
+      # (host.docker.internal на Linux-VPS не резолвится, в отличие от
+      # Docker Desktop на Windows). WEB_REVALIDATE_SECRET = REVALIDATE_SECRET
+      # у web: код admin шлёт его в x-revalidate-secret, web сверяет.
+      NEXT_PUBLIC_WEB_REVALIDATE_URL: http://web:3000/api/revalidate
+      WEB_REVALIDATE_SECRET: ${REVALIDATE_SECRET}
     volumes:
       - uploads:/app/diva-admin/public/uploads   # общий том загрузок
     healthcheck:
@@ -189,6 +207,10 @@ services:
       # контейнер падал на старте ("open /etc/caddy/Caddyfile: no such file or
       # directory") и уходил в restart-loop. См. DEPLOY-BLOCKERS.md, блокер 2.
       - ../ops/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      # Том загрузок, чтобы Caddy отдавал /uploads/* напрямую через file_server
+      # (Next standalone build не отдаёт их сам, т.к. volume подмонтирован уже
+      # после сборки — см. комментарий в Caddyfile.prod).
+      - uploads:/uploads
       - caddy-data:/data
       - caddy-config:/config
     healthcheck:

@@ -11,6 +11,7 @@ import { getVisibleEntity } from '@/lib/entities';
 import { authorize, coerceBody, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
 import { revalidateFromEntity } from '@/lib/revalidate-web';
+import { readJsonBody } from '@/lib/cp1251';
 
 // Пагинация по умолчанию — защита от DoS / утечки PII на больших таблицах.
 const DEFAULT_LIMIT = 50;
@@ -59,8 +60,20 @@ export async function POST(
   const auth = await authorize('content:write');
   if ('error' in auth) return auth.error;
 
+  // Singleton-сущности (hero-configs, footer-configs) — единственная запись
+  // редактируется через PUT, создавать вторую нельзя. Раньше попытка
+  // возвращала 500 (constraint violation), теперь — понятный 409.
+  if (entity.singleton) {
+    return jsonError(
+      'Эта сущность — singleton: редактируйте существующую запись через PUT /api/' +
+        slug +
+        '/:id',
+      409,
+    );
+  }
+
   try {
-    const raw = (await request.json()) as Record<string, unknown>;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
     const { data, error } = coerceBody(entity, raw);
     if (error) return jsonError(error, 400);
 

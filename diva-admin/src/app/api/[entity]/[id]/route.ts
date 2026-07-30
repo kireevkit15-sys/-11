@@ -12,6 +12,7 @@ import { getVisibleEntity, type EntityConfig } from '@/lib/entities';
 import { authorize, coerceBody, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
 import { revalidateFromEntity } from '@/lib/revalidate-web';
+import { readJsonBody } from '@/lib/cp1251';
 
 /**
  * Сравнение id, устойчивое к типу колонки (uuid или integer-serial):
@@ -54,8 +55,12 @@ export async function PUT(
   if ('error' in auth) return auth.error;
 
   try {
-    const raw = (await request.json()) as Record<string, unknown>;
-    const { data, error } = coerceBody(entity, raw);
+    const raw = await readJsonBody<Record<string, unknown>>(request);
+    // partial: true — PUT-редактирование: можно прислать только те поля,
+    // которые меняются. required-поля, которых нет в raw, не валят запрос.
+    // Drizzle.update всё равно их не тронет — это семантика частичного
+    // апдейта, как PATCH в REST.
+    const { data, error } = coerceBody(entity, raw, { partial: true });
     if (error) return jsonError(error, 400);
 
     // updatedAt обновляем, если колонка есть

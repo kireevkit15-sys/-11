@@ -44,8 +44,13 @@ export async function POST(
     // Строим VALUES-таблицу (id, position) и одним UPDATE применяем порядок.
     // Это атомарно (single SQL statement), нет N+1 round-trip, и не оставляет
     // промежуточного «полу-sorted» состояния для читателей.
+    //
+    // position кастим в ::int явно: VALUES (…) без указания типа создаёт
+    // text-колонку, а services.sort_order / faqs.sortOrder / etc. — integer.
+    // Без ::int Postgres возвращает 42804 ("column … is of type integer but
+    // expression is of type text") и reorder возвращает 500.
     const values = sql.join(
-      ids.map((id, i) => sql`(${id}::text, ${i})`),
+      ids.map((id, i) => sql`(${id}::text, ${i}::int)`),
       sql`, `,
     );
 

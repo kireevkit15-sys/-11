@@ -117,20 +117,40 @@ export interface CoerceResult {
   error?: string;
 }
 
+export interface CoerceOptions {
+  /**
+   * true — partial update (PUT): пропускать поля, которых нет в `raw`,
+   * не считать отсутствующие required-поля ошибкой. Это позволяет
+   * редактировать одну карточку без повторной отправки всех полей.
+   *
+   * false (по умолчанию) — create: всё required должно быть в `raw`.
+   */
+  partial?: boolean;
+}
+
 /**
  * Приводит «сырое» тело запроса к типам полей сущности.
  * - пустые text/number/date — пропускаются (срабатывает DEFAULT БД либо null);
  * - checkbox — всегда boolean;
  * - list — массив строк (jsonb).
- * Проверяет обязательные поля.
+ * Проверяет обязательные поля (если не partial).
  */
-export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | null | undefined): CoerceResult {
+export function coerceBody(
+  entity: EntityConfig,
+  raw: Record<string, unknown> | null | undefined,
+  opts: CoerceOptions = {},
+): CoerceResult {
   const data: Record<string, unknown> = {};
   const src = raw ?? {};
+  const partial = opts.partial ?? false;
 
   for (const field of entity.fields) {
     if (SYSTEM_FIELDS.has(field.name)) continue;
     const value = src[field.name];
+
+    // partial update: пропускаем поля, которых нет в raw — Drizzle.update
+    // их просто не тронет (что и нужно для частичного апдейта).
+    if (partial && !(field.name in src)) continue;
 
     switch (field.type) {
       case 'checkbox': {
@@ -139,7 +159,9 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | 
       }
       case 'number': {
         if (value === '' || value === null || value === undefined) {
-          if (field.required) return { data, error: `Поле «${field.label}» обязательно` };
+          if (field.required && !partial) {
+            return { data, error: `Поле «${field.label}» обязательно` };
+          }
           break; // пропускаем — сработает DEFAULT/NULL
         }
         const n = typeof value === 'number' ? value : parseInt(String(value), 10);
@@ -149,7 +171,9 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | 
       }
       case 'date': {
         if (value === '' || value === null || value === undefined) {
-          if (field.required) return { data, error: `Поле «${field.label}» обязательно` };
+          if (field.required && !partial) {
+            return { data, error: `Поле «${field.label}» обязательно` };
+          }
           break;
         }
         const d = new Date(String(value));
@@ -160,7 +184,9 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | 
       case 'json': {
         const s = value === null || value === undefined ? '' : String(value).trim();
         if (s === '') {
-          if (field.required) return { data, error: `Поле «${field.label}» обязательно` };
+          if (field.required && !partial) {
+            return { data, error: `Поле «${field.label}» обязательно` };
+          }
           break;
         }
         try {
@@ -200,7 +226,9 @@ export function coerceBody(entity: EntityConfig, raw: Record<string, unknown> | 
         // text / textarea / select / image
         const s = value === null || value === undefined ? '' : String(value).trim();
         if (s === '') {
-          if (field.required) return { data, error: `Поле «${field.label}» обязательно` };
+          if (field.required && !partial) {
+            return { data, error: `Поле «${field.label}» обязательно` };
+          }
           // image: пустая строка = null в БД (явный сброс фото через UI).
           // Без этого при PUT с пустым полем старое значение фото сохранялось бы,
           // потому что drizzle.update игнорирует ключи, которых нет в объекте.

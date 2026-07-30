@@ -36,6 +36,16 @@
 		format json
 	}
 
+	# /uploads — общий docker-volume с файлами, которые заливает админка
+	# (логотипы клиентов, фото команды, обложки кейсов). Next standalone build
+	# не отдаёт эти файлы сам, потому что volume подмонтирован уже после сборки
+	# (admin пишет в /app/public/uploads через volume, web этот volume читает).
+	# Caddy file_server отдаёт файлы напрямую, без round-trip в Next.
+	handle_path /uploads/* {
+		root * /uploads
+		file_server
+	}
+
 	reverse_proxy web:3000
 }
 
@@ -66,6 +76,13 @@
 	# -------------------------------------------------------------------------
 	# @denied not remote_ip 203.0.113.10 198.51.100.0/24 2001:db8::/32
 	# respond @denied 403
+
+	# /uploads для админки — чтобы превью загруженных картинок работало
+	# сразу после upload, без round-trip в diva-admin.
+	handle_path /uploads/* {
+		root * /uploads
+		file_server
+	}
 
 	reverse_proxy diva-admin:3001
 }
