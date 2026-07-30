@@ -162,15 +162,13 @@ export function LeadsList() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead, idx) => {
+                {filtered.map((lead) => {
                   const meta = statusMeta(lead.status);
                   return (
                     <tr
                       key={lead.id}
                       onClick={() => router.push(`/admin/leads/${lead.id}`)}
-                      className={`cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-brand-50/30 dark:border-slate-800 dark:hover:bg-brand-950/40 ${
-                        idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/60' : ''
-                      }`}
+                      className={`cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-brand-50/30 dark:border-slate-800 dark:hover:bg-brand-950/40`}
                     >
                       <td className="px-6 py-4 align-top font-medium text-slate-800 dark:text-slate-100">{lead.name}</td>
                       <td className="px-6 py-4 align-top text-slate-700 dark:text-slate-200">{lead.contact}</td>

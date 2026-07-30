@@ -101,8 +101,8 @@ function EntityRow({
       ref={setNodeRef}
       style={style}
       className={`border-b border-slate-100 transition-colors last:border-0 hover:bg-brand-50/30 dark:border-slate-800 dark:hover:bg-brand-950/40 ${
-        idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/60' : ''
-      } ${isDragging ? 'relative z-10 bg-white shadow-lg dark:bg-slate-900' : ''}`}
+        isDragging ? 'relative z-10 bg-white shadow-lg dark:bg-slate-900' : ''
+      }`}
     >
       {draggable && (
         <td className="w-10 px-2 py-3">

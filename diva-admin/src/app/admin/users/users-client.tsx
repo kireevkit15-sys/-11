@@ -170,12 +170,10 @@ export function UsersClient({ currentUserId }: { currentUserId: string }) {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, idx) => (
+                {items.map((item) => (
                   <tr
                     key={item.id}
-                    className={`border-b border-slate-100 transition-colors last:border-0 hover:bg-brand-50/30 dark:border-slate-800 dark:hover:bg-brand-950/40 ${
-                      idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/60' : ''
-                    }`}
+                    className={`border-b border-slate-100 transition-colors last:border-0 hover:bg-brand-50/30 dark:border-slate-800 dark:hover:bg-brand-950/40`}
                   >
                     <td className="px-6 py-4 align-middle">
                       <span className="font-medium text-slate-800 dark:text-slate-100">{item.email}</span>
