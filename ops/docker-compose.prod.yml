@@ -123,6 +123,11 @@ services:
     build:
       context: ..
       dockerfile: diva-admin/Dockerfile
+      args:
+        # NEXT_PUBLIC_* инлайнится в client bundle на build-этапе.
+        # Без него resolveMediaUrl в lib/media.ts вернёт относительный
+        # путь, и <img src="/team/…"> на admin-домене даст 404.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     container_name: diva-admin
     init: true
     depends_on:

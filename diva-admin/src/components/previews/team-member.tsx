@@ -2,6 +2,7 @@
 
 import { Award, Briefcase, Quote, GraduationCap } from 'lucide-react';
 import { PreviewProps, str, num, bool } from './types';
+import { resolveMediaUrl } from '@/lib/media';
 
 const BRAND = '#4F46E5';
 const ACCENT = '#fb923c';
@@ -54,7 +55,7 @@ export function TeamMemberPreview({ values }: PreviewProps) {
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={photoUrl}
+              src={resolveMediaUrl(photoUrl)}
               alt={fullName}
               className="absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition: 'center top' }}

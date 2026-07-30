@@ -19,6 +19,11 @@ COPY diva-admin ./diva-admin
 COPY --from=deps /app/diva-admin/node_modules ./diva-admin/node_modules
 WORKDIR /app/diva-admin
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_SITE_URL инлайнится в client bundle на этапе сборки
+# (нужен для resolveMediaUrl в превью изображений — иначе img src
+# будет относительным и не загрузится на админском origin).
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 RUN npm run build
 
 # ---------- runner ----------

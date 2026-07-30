@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Upload, Loader2, X, ImageIcon } from 'lucide-react';
+import { resolveMediaUrl } from '@/lib/media';
 
 /**
  * Поле загрузки изображения: кнопка «Загрузить» (POST /api/upload),
@@ -46,7 +47,7 @@ export function ImageField({
         <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" className="h-full w-full object-contain" />
+            <img src={resolveMediaUrl(value)} alt="" className="h-full w-full object-contain" />
           ) : (
             <ImageIcon className="h-7 w-7 text-slate-300 dark:text-slate-500" />
           )}

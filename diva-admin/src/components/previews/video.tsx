@@ -2,6 +2,7 @@
 
 import { Play, Eye } from 'lucide-react';
 import { PreviewProps, str, num } from './types';
+import { resolveMediaUrl } from '@/lib/media';
 
 export function VideoPreview({ values }: PreviewProps) {
   const title = str(values.title, 'Название видео появится здесь');
@@ -38,7 +39,7 @@ export function VideoPreview({ values }: PreviewProps) {
           <div className="relative aspect-video w-full overflow-hidden">
             {cover ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={cover} alt={title} className="h-full w-full object-cover" />
+              <img src={resolveMediaUrl(cover)} alt={title} className="h-full w-full object-cover" />
             ) : (
               <div
                 className="flex h-full w-full items-center justify-center"

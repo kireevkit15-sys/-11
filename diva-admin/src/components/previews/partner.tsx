@@ -2,6 +2,7 @@
 
 import { Github, Globe, Send, ArrowRight } from 'lucide-react';
 import { PreviewProps, str, num, bool, list } from './types';
+import { resolveMediaUrl } from '@/lib/media';
 
 const CATEGORY_LABEL: Record<string, string> = {
   fullstack: 'Full-stack',
@@ -60,7 +61,7 @@ export function PartnerPreview({ values }: PreviewProps) {
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={logoUrl}
+                  src={resolveMediaUrl(logoUrl)}
                   alt={name}
                   className="h-16 w-16 rounded-2xl object-contain"
                   style={{ background: 'rgba(255,255,255,0.06)', boxShadow: `0 0 0 3px ${hsl}30, 0 0 32px ${hsl}40` }}

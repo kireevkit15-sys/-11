@@ -2,6 +2,7 @@
 
 import { Quote, TrendingUp, CalendarRange } from 'lucide-react';
 import { PreviewProps, str, num, bool, list } from './types';
+import { resolveMediaUrl } from '@/lib/media';
 
 const BRAND = '#fb923c';
 
@@ -79,7 +80,7 @@ export function CaseStudyPreview({ values }: PreviewProps) {
               >
                 {clientLogoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={clientLogoUrl} alt={clientName} className="h-full w-full object-cover" />
+                  <img src={resolveMediaUrl(clientLogoUrl)} alt={clientName} className="h-full w-full object-cover" />
                 ) : (
                   initials
                 )}

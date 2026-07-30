@@ -34,6 +34,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { ClientEntity, ColumnConfig } from '@/lib/entities';
 import { useToast, useConfirm } from '@/components/providers';
+import { resolveMediaUrl } from '@/lib/media';
 
 type Row = { id: string } & Record<string, unknown>;
 
@@ -121,7 +122,7 @@ function EntityRow({
           {item[imageField] ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={String(item[imageField])}
+              src={resolveMediaUrl(String(item[imageField]))}
               alt=""
               className="h-10 w-10 rounded-lg border border-slate-200 object-cover dark:border-slate-700"
             />
