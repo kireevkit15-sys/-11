@@ -11,6 +11,7 @@ import { leads, leadNotes } from '@db/schema';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
 import { isLeadStatus, LEAD_STATUSES } from '@/app/admin/leads/status';
+import { readJsonBody } from '@/lib/cp1251';
 
 export async function GET(
   _request: NextRequest,
@@ -47,7 +48,7 @@ export async function PATCH(
   if ('error' in auth) return auth.error;
 
   try {
-    const raw = (await request.json()) as Record<string, unknown>;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
     const data: Record<string, unknown> = {};
     let prevStatus: string | undefined;
 

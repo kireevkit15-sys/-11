@@ -13,6 +13,7 @@ import { and, count, eq, ne, sql } from 'drizzle-orm';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { hashPassword, validatePasswordStrength, type AdminRole } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { readJsonBody } from '@/lib/cp1251';
 
 const ROLES: AdminRole[] = ['admin', 'editor', 'viewer'];
 
@@ -38,7 +39,7 @@ export async function PATCH(
     const existing = await db.query.adminUsers.findFirst({ where: eq(adminUsers.id, id) });
     if (!existing) return jsonError('Пользователь не найден', 404);
 
-    const raw = (await request.json()) as Record<string, unknown>;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
 
     const updates: Partial<typeof adminUsers.$inferInsert> & Record<string, unknown> = { updatedAt: new Date() };
     const auditPayload: Record<string, unknown> = {};

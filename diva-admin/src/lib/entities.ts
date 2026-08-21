@@ -494,6 +494,14 @@ export const ENTITIES: Record<string, EntityConfig> = {
     labelPlural: 'Объявления',
     icon: 'Megaphone',
     group: 'Объявления',
+    // Скрыто из админки: на сайте /announcements теперь рендерит partners
+    // (см. web/src/app/announcements/page.tsx → getServerParters), а эта
+    // старая таблица announcements на сайте не используется. Записи в ней —
+    // устаревший тестовый контент с битой кодировкой. Таблица в БД
+    // сохраняется (на случай если позже понадобится). Скрываем через
+    // hidden: true — пропадает из дашборда, бокового меню и getVisibleEntity
+    // (прямой заход на /admin/announcements вернёт 404).
+    hidden: true,
     table: announcements,
     orderBy: 'sortOrder',
     titleField: 'title',
@@ -523,7 +531,7 @@ export const ENTITIES: Record<string, EntityConfig> = {
     slug: 'partners',
     icon: 'Handshake',
     label: 'Партнёр',
-    labelPlural: 'Партнёры (вкладка «Объявления»)',
+    labelPlural: 'Партнёры',
     group: 'Объявления',
     table: partners,
     orderBy: 'sortOrder',

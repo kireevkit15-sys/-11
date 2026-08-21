@@ -11,6 +11,7 @@ import { currentUser } from '@/lib/api-helpers';
 import { setSessionUser } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { db } from '@/lib/db';
+import { readJsonBody } from '@/lib/cp1251';
 
 const schema = z.object({
   currentPassword: z.string().min(1, 'Введите текущий пароль'),
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
 
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? 'Некорректные данные';
       return NextResponse.json({ error: message }, { status: 400 });

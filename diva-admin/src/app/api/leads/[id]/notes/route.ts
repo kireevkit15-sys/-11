@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { leads, leadNotes } from '@db/schema';
 import { authorize, currentUser, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { logAudit } from '@/lib/audit';
+import { readJsonBody } from '@/lib/cp1251';
 
 export async function POST(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function POST(
   if ('error' in auth) return auth.error;
 
   try {
-    const raw = (await request.json()) as Record<string, unknown>;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
     let text = raw.text === null || raw.text === undefined ? '' : String(raw.text).trim();
     if (text === '') return jsonError('Текст заметки обязателен', 400);
     // Ограничение на длину — без этого можно залить 10 МБ в одно поле.

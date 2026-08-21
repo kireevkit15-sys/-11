@@ -47,6 +47,10 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       INTERNAL_API_BASE: http://127.0.0.1:3000
+      # On-demand revalidation: web сверяет x-revalidate-secret с этим
+      # секретом. Без него webhook всегда падает в 401 и ISR не
+      # сбрасывается — сайт показывает старые данные после правок в админке.
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
     # Host-port 3000 занят процессом com.docker.backend (PID 23096) на
     # Windows-хосте — bind-mount в Docker Desktop. Проксируем через
     # хост-порт 3010 → container 3000. Пользователь открывает
@@ -127,7 +131,10 @@ services:
       # мутации (POST/PUT/DELETE), чтобы web немедленно сбросил ISR-кеш.
       # host.docker.internal:3300 — шлюз Docker Desktop на Windows к web'у.
       NEXT_PUBLIC_WEB_REVALIDATE_URL: http://host.docker.internal:3300/api/revalidate
-      WEB_REVALIDATE_SECRET: 58bf18e1f96794353657c8e8df06379f3dd3fda49fee9c9f3f761ea6c9408ff4
+      # WEB_REVALIDATE_SECRET — то же значение, что и REVALIDATE_SECRET у web.
+      # Код admin читает process.env.WEB_REVALIDATE_SECRET и шлёт его в
+      # заголовке x-revalidate-secret; web сверяет со своим REVALIDATE_SECRET.
+      WEB_REVALIDATE_SECRET: ${REVALIDATE_SECRET}
     # Host-port 3001 тоже занят тем же com.docker.backend. Хост-порт 3011
     # → container 3001. Пользователь открывает http://localhost:3011/login.
     ports:

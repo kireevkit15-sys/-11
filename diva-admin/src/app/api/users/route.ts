@@ -13,6 +13,7 @@ import { desc } from 'drizzle-orm';
 import { authorize, dbErrorResponse, jsonError, clientIp } from '@/lib/api-helpers';
 import { hashPassword, validatePasswordStrength, type AdminRole } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { readJsonBody } from '@/lib/cp1251';
 
 const ROLES: AdminRole[] = ['admin', 'editor', 'viewer'];
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
   if ('error' in auth) return auth.error;
 
   try {
-    const raw = (await request.json()) as Record<string, unknown>;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
     const email = String(raw.email ?? '').trim().toLowerCase();
     const name = String(raw.name ?? '').trim();
     const role = String(raw.role ?? '') as AdminRole;

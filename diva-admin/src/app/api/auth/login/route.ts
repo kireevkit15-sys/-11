@@ -4,6 +4,7 @@ import { validateCredentials } from '@/lib/auth';
 import { setSessionUser } from '@/lib/session';
 import { logAudit } from '@/lib/audit';
 import { loginRateStatus, recordLoginFailure, clearLoginRate } from '@/lib/rate-limit';
+import { readJsonBody } from '@/lib/cp1251';
 
 const loginSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -20,7 +21,7 @@ function clientIp(request: NextRequest): string | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? 'Некорректные данные';

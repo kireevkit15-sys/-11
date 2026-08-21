@@ -186,33 +186,76 @@ export default async function DashboardPage() {
 
         {/* График новых заявок за 14 дней */}
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
-            <BarChart3 className="h-5 w-5 text-coral-500" />
-            <h3 className="text-sm font-semibold">Новые заявки за 14 дней</h3>
-          </div>
-          <div className="mt-5 flex h-40 items-end gap-2">
-            {stats.leadsByDay.map((d, i) => {
-              const heightPct = d.count > 0 ? Math.max((d.count / dayMax) * 100, 6) : 0;
+          <div className="flex items-center justify-between text-slate-900 dark:text-slate-100">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-coral-500" />
+              <h3 className="text-sm font-semibold">Новые заявки за 14 дней</h3>
+            </div>
+            {(() => {
+              const total14 = stats.leadsByDay.reduce((sum, d) => sum + d.count, 0);
               return (
-                <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
-                  <div className="relative flex h-full w-full items-end justify-center">
-                    <div
-                      className="w-full max-w-[28px] rounded-t-md bg-brand-500 transition-all group-hover:bg-brand-600"
-                      style={{ height: `${heightPct}%` }}
-                      title={`${dayTick(d.day)}: ${d.count}`}
-                    />
-                    {d.count > 0 && (
-                      <span className="absolute -top-5 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                        {d.count}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
-                    {i % 2 === 0 ? dayTick(d.day) : ' '}
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Всего за период: <span className="font-semibold text-slate-700 dark:text-slate-200">{total14}</span>
+                </span>
+              );
+            })()}
+          </div>
+          <div className="relative mt-5 h-44">
+            {/* Горизонтальные направляющие + ось Y (25/50/75/100% от dayMax) */}
+            <div className="absolute inset-0">
+              {[100, 75, 50, 25].map((pct) => (
+                <div
+                  key={pct}
+                  className="absolute left-8 right-0 border-t border-dashed border-slate-200 dark:border-slate-700/70"
+                  style={{ bottom: `${pct}%` }}
+                >
+                  <span className="absolute -left-8 -translate-y-1/2 text-[9px] tabular-nums text-slate-400 dark:text-slate-500">
+                    {Math.round((dayMax * pct) / 100)}
                   </span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+            {/* Столбцы */}
+            <div className="absolute inset-x-0 bottom-0 left-8 flex h-full items-stretch gap-2">
+              {stats.leadsByDay.map((d, i) => {
+                const hasData = d.count > 0;
+                const heightPct = hasData ? Math.max((d.count / dayMax) * 100, 6) : 0;
+                const isToday = i === stats.leadsByDay.length - 1;
+                // Для дней без заявок — минимальная полоса-метка (3px) в
+                // приглушённом тоне, чтобы каждое число диапазона было
+                // видно на оси, а не схлопывалось в невидимый 0%.
+                const barClass = !hasData
+                  ? 'bg-slate-200 dark:bg-slate-700/60'
+                  : isToday
+                    ? 'bg-coral-500'
+                    : 'bg-brand-500 group-hover/bar:bg-brand-600';
+                return (
+                  <div key={d.day} className="group/bar relative flex flex-1 flex-col items-center gap-1">
+                    <div className="relative flex flex-1 w-full items-end justify-center">
+                      {/* Hover-тултип */}
+                      <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white shadow-md group-hover/bar:block dark:bg-slate-700">
+                        {dayTick(d.day)}: {d.count}
+                      </div>
+                      <div
+                        className={`relative w-full max-w-[26px] rounded-t-md transition-colors ${barClass}`}
+                        style={{ height: hasData ? `${heightPct}%` : '3px' }}
+                      />
+                    </div>
+                    <span className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
+                      {i % 2 === 0 ? dayTick(d.day) : ''}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand-500" /> по дням
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-coral-500" /> сегодня
+            </span>
           </div>
         </div>
       </section>
