@@ -17,7 +17,7 @@ rebuild:
 	docker compose -f docker-compose.dev.yml build --no-cache
 
 prod-up:
-	docker compose -f docker-compose.prod.yml --env-file .env up -d
+	docker compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
 
 backup-db:
 	./scripts/backup-db.sh

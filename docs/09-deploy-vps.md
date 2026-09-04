@@ -3,13 +3,12 @@
 Инструкция для сисадмина: перенос проекта с машины разработчика на production-VPS,
 разворачивание базы из дампа, подключение домена `diva-start-up.ru` (регистратор **reg.ru**).
 
-> **Актуализация от 11.07.2026.** В предыдущей версии этой инструкции (и в
-> репозитории на тот момент) было три блокера, из-за которых деплой по шагам
-> ниже не поднялся бы на чистом сервере — они найдены и исправлены:
-> отсутствовавший в git `db/migrations/meta/_journal.json` (раздел 5),
-> неверное монтирование Caddyfile (раздел 6), недоступный в runtime-образе
-> `seed-admin.ts` (раздел 8, теперь через отдельный сервис `seed-admin`).
-> Все три зафиксированы в `DEPLOY-BLOCKERS.md` и исправлены в этом коммите.
+> **Актуализация от 04.09.2026.** В репозитории добавлена миграция `0006`,
+> которая финализирует отсутствующие объекты и ограничения после исторических
+> миграций. Она остаётся последней в journal и получает timestamp новее `0005`,
+> чтобы примениться на существующей production-базе. Миграция `0002` теперь
+> сама создаёт необходимые prerequisites и не содержит недопустимого для
+> PostgreSQL `CHECK` с `now()`.
 
 ---
 
@@ -21,7 +20,7 @@
 |---|---|---|---|
 | `postgres` | `diva-pg` | 5432 | PostgreSQL 16 (БД) |
 | `migrate` | `diva-migrate` | — | Одноразовый: применяет Drizzle-миграции |
-| `web` | `diva-web` | 3000 | Публичный сайт (Next.js 16, standalone) |
+| `web` | `diva-web` | 3000 | Публичный сайт (Next.js 15) |
 | `diva-admin` | `diva-admin` | 3001 | Кастомная админ-панель (Next.js) |
 | `bot` | `diva-bot` | — | Telegram-бот (grammY, long polling) |
 | `caddy` | `diva-caddy` | 80, 443 | Reverse proxy + автоматический TLS (Let's Encrypt) |
@@ -137,6 +136,7 @@ ADMIN_SESSION_SECRET=<сгенерировать: openssl rand -hex 32>
 BOT_TOKEN=<взять у разработчика>
 ROP_CHAT_ID=<взять у разработчика>
 WEB_BASE_URL=https://diva-start-up.ru
+REVALIDATE_SECRET=<сгенерировать: openssl rand -hex 32>
 
 # Домены и TLS
 DOMAIN=diva-start-up.ru
@@ -154,9 +154,10 @@ ACME_EMAIL=diva.consulting.b@gmail.com
 
 ## 5. Развёртывание базы из дампа
 
-Порядок важен: сначала поднимаем **только Postgres**, накатываем дамп, потом
-запускаем весь стек. Так `migrate` увидит, что миграция уже применена, и
-завершится как no-op.
+Порядок важен: сначала поднимаем **только Postgres**, если восстанавливаемся
+из существующего дампа — накатываем дамп, затем запускаем весь стек. Для
+полностью чистой БД дамп не нужен: `migrate` применит все SQL из
+`db/migrations/` в порядке journal, включая финализацию схемы через `0006`.
 
 ```bash
 # 1. Скопировать дамп на сервер (с машины разработчика):
@@ -174,9 +175,11 @@ gunzip -c /opt/diva/ops/diva-dump-2026-07-06.sql.gz \
   | docker exec -i diva-pg psql -U diva -d diva
 
 # 4. Проверить, что данные на месте
+# В старом дампе ожидается запись baseline; после запуска стека migrate
+# применит недостающие SQL-миграции и завершится на финальной записи 0006.
 docker exec diva-pg psql -U diva -d diva -c "SELECT count(*) FROM leads;"        # ожидаем: 7
 docker exec diva-pg psql -U diva -d diva -c "SELECT email, role FROM admin_users;"  # ожидаем: admin@diva.ru / admin
-docker exec diva-pg psql -U diva -d diva -c "SELECT count(*) FROM drizzle.__drizzle_migrations;"  # ожидаем: 1
+docker exec diva-pg psql -U diva -d diva -c "SELECT id, created_at FROM drizzle.__drizzle_migrations ORDER BY id DESC LIMIT 1;"  # ожидаем: created_at=1788523200000
 ```
 
 Если на шаге 3 вылетает ошибка про существующие таблицы — значит, миграция
@@ -189,28 +192,38 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d postgres
 gunzip -c /opt/diva/ops/diva-dump-2026-07-06.sql.gz | docker exec -i diva-pg psql -U diva -d diva
 ```
 
-> **Почему это должно сработать.** Раньше в репозитории отсутствовал файл
-> `db/migrations/meta/_journal.json` (был в `.gitignore`) — без него
-> `drizzle-kit migrate` не видит вообще ни одной миграции и завершается
-> ошибкой, а `web`/`diva-admin` не стартуют, потому что оба ждут
-> `migrate: condition: service_completed_successfully`. Файл теперь
-> закоммитен вместе со снапшотом схемы (`meta/0000_snapshot.json`), поэтому
-> `migrate` на шаге 6 увидит, что миграция `0000_baseline_schema` уже
-> применена (её запись есть в дампе, в схеме `drizzle`), и завершится как
-> no-op — это ожидаемое и правильное поведение.
+> **Почему это должно сработать.** Файлы SQL и `meta/_journal.json` теперь
+> синхронизированы. На существующей базе с записью о baseline `migrate`
+> применит недостающие записи по timestamp и завершится на финальной `0006`.
+> На чистой базе `0002` безопасна при непосредственном выполнении, а `0006`
+> идемпотентно создаёт prerequisites, поля и ограничения, необходимые
+> текущему приложению.
 
 ---
 
 ## 6. Запуск всего стека
 
+### Чистая БД или первый запуск
+
 ```bash
 cd /opt/diva/ops
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
+```
+
+### После восстановления БД из дампа
+
+Та же команда запускает `migrate` в режиме no-op для уже записанных миграций и
+применяет только отсутствующие миграции. Не удаляйте PostgreSQL volume после
+восстановления: это уничтожит данные.
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
 ```
 
 `--build` собирает образы `web`, `diva-admin`, `bot`, `postgres` из исходников
 (первый запуск — 5–10 минут, качаются base-образы и ставятся npm-зависимости).
-Дальнейшие деплои — `up -d` без `--build` (или с `--build` при обновлении кода).
+Дальнейшие обновления также выполняются через `up -d --build --remove-orphans`,
+чтобы образы пересобирались из нового commit.
 
 Проверить:
 
@@ -232,8 +245,9 @@ docker compose -f docker-compose.prod.yml logs -f caddy
 > directory`, и не поднимутся ни сайт, ни TLS.
 
 Порядок старта (задан в compose через `depends_on`):
-`postgres` → `migrate` (проверит, что миграция 0000 уже применена — пропустит) →
-`web` + `diva-admin` + `bot` → `caddy`.
+`postgres` → `migrate` (обрабатывает journal и идемпотентно финализирует схему
+через `0006`; исторические записи с устаревшими timestamp могут быть
+пропущены без потери нужных объектов) → `web` + `diva-admin` + `bot` → `caddy`.
 
 ---
 
@@ -356,7 +370,7 @@ Object Storage / отдельный диск). Минимум: раз в ден�
 cd /opt/diva
 git pull --ff-only
 cd ops
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
 docker image prune -f    # убрать старые образы
 ```
 

@@ -1,34 +1,46 @@
 #!/usr/bin/env python3
-"""Generate ops/.env for the ДИВА project on the server.
+"""Generate ops/.env for the Diva production stack.
+
 Usage: python3 gen-env.py <pg_password> <bot_token> <rop_chat_id>
-ADMIN_SESSION_SECRET is generated automatically.
 """
-import secrets, sys, os
+import os
+import secrets
+import sys
+
 
 if len(sys.argv) != 4:
     print("Usage: python3 gen-env.py <pg_password> <bot_token> <rop_chat_id>")
     sys.exit(1)
 
-pg_pass, bot_token, rop_chat_id = sys.argv[1], sys.argv[2], sys.argv[3]
-server_ip = "92.246.138.173"
+pg_pass, bot_token, rop_chat_id = sys.argv[1:]
+domain = os.environ.get("DOMAIN", "diva-start-up.ru")
+admin_domain = os.environ.get("ADMIN_DOMAIN", f"admin.{domain}")
+acme_email = os.environ.get("ACME_EMAIL", "")
+site_url = os.environ.get("NEXT_PUBLIC_SITE_URL", f"https://{domain}")
+web_base_url = os.environ.get("WEB_BASE_URL", site_url)
+env_path = os.environ.get(
+    "ENV_PATH",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env")),
+)
 
 lines = [
-    f"POSTGRES_USER=diva",
+    "POSTGRES_USER=diva",
     f"POSTGRES_PASSWORD={pg_pass}",
-    f"POSTGRES_DB=diva",
+    "POSTGRES_DB=diva",
     f"DATABASE_URL=postgres://diva:{pg_pass}@postgres:5432/diva",
-    f"NEXT_PUBLIC_SITE_URL=http://{server_ip}",
+    f"NEXT_PUBLIC_SITE_URL={site_url}",
     f"ADMIN_SESSION_SECRET={secrets.token_hex(32)}",
     f"BOT_TOKEN={bot_token}",
     f"ROP_CHAT_ID={rop_chat_id}",
-    f"WEB_BASE_URL=http://{server_ip}",
-    f"DOMAIN=diva-start-up.ru",
-    f"ADMIN_DOMAIN=admin.diva-start-up.ru",
-    f"ACME_EMAIL=diva.consulting.b@gmail.com",
+    f"WEB_BASE_URL={web_base_url}",
+    f"REVALIDATE_SECRET={secrets.token_hex(32)}",
+    f"DOMAIN={domain}",
+    f"ADMIN_DOMAIN={admin_domain}",
+    f"ACME_EMAIL={acme_email}",
 ]
 
-out = os.path.join(os.path.dirname(__file__), "..", ".env")
-with open(out, "w", newline="\n") as f:
-    f.write("\n".join(lines) + "\n")
+with open(env_path, "w", encoding="utf-8", newline="\n") as env_file:
+    env_file.write("\n".join(lines) + "\n")
+os.chmod(env_path, 0o600)
 
-print(f"Done! Written to {out}")
+print(f"Created {env_path}")

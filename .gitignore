@@ -116,3 +116,21 @@ web/nul
 # Host-папка для bind-mount между web и diva-admin контейнерами.
 # Не должна попадать в репо — файлы загружаются в runtime.
 uploads-shared/
+
+# Production database backups — contain application data and must stay off git.
+ops/backups/
+
+# Ad-hoc diagnostics — local investigation artifacts, not application sources.
+bot/diag-network.cjs
+diva-admin/diag.js
+diva-admin/diag2.js
+diva-admin/diag3.js
+diva-admin/diag4.js
+diva-admin/probe.js
+diva-admin/probe3.js
+diva-admin/prod-test.js
+diva-admin/prod-test2.js
+diva-admin/prod-test3.js
+diva-admin/test-cp.js
+diva-admin/test-cp1251.js
+diva-admin/test-direct.js

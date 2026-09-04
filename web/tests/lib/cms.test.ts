@@ -266,7 +266,7 @@ describe('CMS Library - serviceToLocalService', () => {
     const result = serviceToLocalService(service as any);
 
     expect(result.title).toBe('Бухгалтерия для УСН');
-    expect(result.price).toBe('7 900');
+    expect(result.price).toBe((7900).toLocaleString('ru-RU'));
     expect(result.perUnit).toBe('₽ / мес');
     expect(result.icon).toBe('Rocket');
     expect(result.items).toEqual(['Отчётность', 'Декларация']);

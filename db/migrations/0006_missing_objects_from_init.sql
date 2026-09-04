@@ -1,23 +1,16 @@
+-- 0006_missing_objects_from_init.sql
+-- Финализирует схему после исторических SQL-миграций 0000-0005.
+--
+-- У старых записей journal timestamp не образуют монотонную последовательность.
+-- Поэтому drizzle-kit может пропустить 0002/0003 на чистой БД, сравнивая только
+-- последний created_at. Эта миграция должна оставаться последней и повторяет
+-- необходимые изменения безопасно для чистой и уже существующей базы.
+-- Применяется один раз; все операции идемпотентны.
+
 -- =====================================================================
--- ДИВА — миграция 0002: CHECK constraints для целостности данных.
---
--- Зачем: text-поля с известным доменом значений (role, status, action, page)
--- проверяются СУБД, а не только на уровне приложения. Это страховка от
--- багов в коде, которые могут записать мусор (например, status='foo')
--- и сломать фильтры/индексы/уведомления в боте.
---
--- Все ограничения — NOT VALID + VALIDATE, чтобы не блокировать таблицы
--- при добавлении (CHECK с полным сканированием может занять минуты на
--- больших таблицах). NOT VALID добавляет constraint только для новых строк;
--- VALIDATE проверяет существующие без блокировки записи.
---
--- Применение: psql $DATABASE_URL -f db/migrations/0002_check_constraints.sql
--- (или через npm run db:apply-checks)
+-- Объекты, отсутствующие в сгенерированной baseline-схеме
 -- =====================================================================
 
--- Make this migration safe for databases created without db/init.sql.
--- These objects are also finalized by 0006 for existing installations where
--- historical journal timestamps caused an earlier migration to be skipped.
 CREATE TABLE IF NOT EXISTS login_attempts (
     key              text         PRIMARY KEY,
     failure_count    integer      NOT NULL DEFAULT 0,
@@ -25,10 +18,39 @@ CREATE TABLE IF NOT EXISTS login_attempts (
     blocked_until    timestamptz
 );
 
+CREATE INDEX IF NOT EXISTS idx_login_attempts_blocked_until
+  ON login_attempts (blocked_until) WHERE blocked_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_login_attempts_first_failure_at
+  ON login_attempts (first_failure_at);
+
+CREATE OR REPLACE FUNCTION cleanup_login_attempts()
+RETURNS integer AS $$
+DECLARE
+    deleted_count integer;
+BEGIN
+    DELETE FROM login_attempts
+    WHERE first_failure_at < now() - INTERVAL '1 hour'
+      AND (blocked_until IS NULL OR blocked_until < now());
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
 ALTER TABLE admin_users
   ADD COLUMN IF NOT EXISTS session_epoch integer NOT NULL DEFAULT 1;
 
--- admin_users.role — только viewer/editor/admin
+ALTER TABLE announcements
+  ADD COLUMN IF NOT EXISTS image_url text;
+
+ALTER TABLE partners
+  ADD COLUMN IF NOT EXISTS categories jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+-- =====================================================================
+-- Целостность данных, которую должны обеспечивать 0002/0003.
+-- Повторяем её здесь, потому что на старой БД часть этих миграций могла
+-- быть пропущена из-за исторических timestamp в journal.
+-- =====================================================================
+
 ALTER TABLE admin_users
   DROP CONSTRAINT IF EXISTS admin_users_role_check;
 ALTER TABLE admin_users
@@ -37,8 +59,6 @@ ALTER TABLE admin_users
   NOT VALID;
 ALTER TABLE admin_users VALIDATE CONSTRAINT admin_users_role_check;
 
--- admin_users.email — базовая проверка формата (Zod всё равно валидирует на API)
--- Не строгий RFC, чтобы не отсекать крайние случаи; просто наличие @.
 ALTER TABLE admin_users
   DROP CONSTRAINT IF EXISTS admin_users_email_format_check;
 ALTER TABLE admin_users
@@ -47,7 +67,6 @@ ALTER TABLE admin_users
   NOT VALID;
 ALTER TABLE admin_users VALIDATE CONSTRAINT admin_users_email_format_check;
 
--- admin_users.session_epoch — неотрицательный
 ALTER TABLE admin_users
   DROP CONSTRAINT IF EXISTS admin_users_session_epoch_nonneg;
 ALTER TABLE admin_users
@@ -56,22 +75,16 @@ ALTER TABLE admin_users
   NOT VALID;
 ALTER TABLE admin_users VALIDATE CONSTRAINT admin_users_session_epoch_nonneg;
 
--- leads.status — единый список с init.sql и bot/src/types.ts.
--- ВАЖНО: в init.sql уже есть constraint leads_status_chk с правильным списком,
--- а в этой миграции исторически использовалось имя leads_status_check с
--- устаревшим набором (waiting/won/archived). Дропаем ОБА имени, чтобы
--- перейти на единый leads_status_check с актуальным списком.
-ALTER TABLE leads
-  DROP CONSTRAINT IF EXISTS leads_status_check;
 ALTER TABLE leads
   DROP CONSTRAINT IF EXISTS leads_status_chk;
+ALTER TABLE leads
+  DROP CONSTRAINT IF EXISTS leads_status_check;
 ALTER TABLE leads
   ADD CONSTRAINT leads_status_check
   CHECK (status IN ('new', 'in_progress', 'interaction_scheduled', 'spam', 'converted', 'lost'))
   NOT VALID;
 ALTER TABLE leads VALIDATE CONSTRAINT leads_status_check;
 
--- leads.source — не пустая строка (если NULL не подходит)
 ALTER TABLE leads
   DROP CONSTRAINT IF EXISTS leads_name_nonempty;
 ALTER TABLE leads
@@ -80,7 +93,6 @@ ALTER TABLE leads
   NOT VALID;
 ALTER TABLE leads VALIDATE CONSTRAINT leads_name_nonempty;
 
--- audit_logs.action — базовые действия
 ALTER TABLE audit_logs
   DROP CONSTRAINT IF EXISTS audit_logs_action_check;
 ALTER TABLE audit_logs
@@ -89,10 +101,6 @@ ALTER TABLE audit_logs
   NOT VALID;
 ALTER TABLE audit_logs VALIDATE CONSTRAINT audit_logs_action_check;
 
--- reminders.fire_at проверяется на границе приложения. CHECK с now() здесь
--- невозможен: PostgreSQL требует IMMUTABLE-функции в CHECK-constraint.
-
--- fsi_deadline_subscriptions.telegram_chat_id — Telegram chat_id > 0
 ALTER TABLE fsi_deadline_subscriptions
   DROP CONSTRAINT IF EXISTS fsi_chat_id_positive;
 ALTER TABLE fsi_deadline_subscriptions
@@ -101,7 +109,9 @@ ALTER TABLE fsi_deadline_subscriptions
   NOT VALID;
 ALTER TABLE fsi_deadline_subscriptions VALIDATE CONSTRAINT fsi_chat_id_positive;
 
--- login_attempts.failure_count — не отрицательный
+ALTER TABLE reminders
+  DROP CONSTRAINT IF EXISTS reminders_fire_at_future;
+
 ALTER TABLE login_attempts
   DROP CONSTRAINT IF EXISTS login_attempts_count_nonneg;
 ALTER TABLE login_attempts
@@ -110,7 +120,6 @@ ALTER TABLE login_attempts
   NOT VALID;
 ALTER TABLE login_attempts VALIDATE CONSTRAINT login_attempts_count_nonneg;
 
--- login_attempts: blocked_until должен быть позже first_failure_at (если не NULL)
 ALTER TABLE login_attempts
   DROP CONSTRAINT IF EXISTS login_attempts_blocked_after_first;
 ALTER TABLE login_attempts
@@ -118,3 +127,7 @@ ALTER TABLE login_attempts
   CHECK (blocked_until IS NULL OR blocked_until >= first_failure_at)
   NOT VALID;
 ALTER TABLE login_attempts VALIDATE CONSTRAINT login_attempts_blocked_after_first;
+
+-- reminders.fire_at нельзя проверять через now() в CHECK-constraint:
+-- PostgreSQL требует для таких ограничений IMMUTABLE-функции. Валидация
+-- времени напоминания остаётся на границе приложения.

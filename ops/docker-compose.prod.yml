@@ -218,6 +218,7 @@ services:
       - uploads:/uploads
       - caddy-data:/data
       - caddy-config:/config
+      - caddy-logs:/var/log/caddy
     healthcheck:
       # Caddyfile.prod имеет `admin off` (безопасность, не светит :2019 наружу),
       # поэтому admin API healthcheck не работает. Проверяем, что процесс жив
